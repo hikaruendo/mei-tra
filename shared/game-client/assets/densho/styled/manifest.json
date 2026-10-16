@@ -1,5 +1,5 @@
 {
-  "recipe": "d6b83087b90d0ee71990f5dc5ebe05275bccf6df54cfa24a7534f2ab5a8109f2",
+  "recipe": "7491d03e8bcd315dcae5d11b1fd367d0d68d4b350d0479bac52e83143636c951",
   "cards": {
     "10_C": {
       "source": "244ea95196fee4b41ee807f0bc7d370a135ec728f1696d0e8c841097379946ff",
@@ -428,9 +428,9 @@
     "joker_red": {
       "source": "735d3df8d59fa053c018c64bbac5b3014d233f3e4dd7797371ec42e05f4689d1",
       "assets": {
-        "small": "7b480b6050b3c453ac99c6a28ad5fc6edc4a0836198f1e6dd2d514af1ac87994",
-        "medium": "fdc5456393150c71a2276b6c672036ddc0d44d715cce5c868c263dc745dd883b",
-        "large": "88ad84226099b8dc99a5be1182b3c3e5765e448052259ceeeda8fa8fde0d3a7e"
+        "small": "b26d09eb7dbeb1f60dba701b7b214828e5313e515c7d313ad92cd4d43adbbaa4",
+        "medium": "203cb895225d192ccd846277e3106fae09e9a6dd4a9f5f53e48d72f625004e96",
+        "large": "b0e9f2be2c61c39727c2ab8c7d716b9fcb284c34fe73f1b108cea04e4dd3c98d"
       }
     }
   }

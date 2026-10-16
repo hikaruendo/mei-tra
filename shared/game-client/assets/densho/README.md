@@ -10,8 +10,9 @@ All suits, including those within court illustrations, keep their positions.
 The ace of spades scan is preserved as supplied; only its derived renders
 widen the central black spade and proportionally enlarge the two corner spades.
 The gold illustration and lettering retain their original position and proportions.
-The Tanzen scan is also preserved; its derived renders slightly thicken only
-the two vertical letter labels, leaving the figure and suit symbols unchanged.
+The Tanzen scan is also preserved; its derived renders enlarge the thin
+`anzen` letters by 20% and slightly thicken the two vertical labels. The large
+`T`, figure, and suit symbols stay unchanged.
 
 `shared/game-client/card-art.ts` owns the artwork selection.
 `densho-rendering.json` owns the print-trim rectangles and output widths.

@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { styleDenshoSvg } from './densho-style.mjs';
 import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
-import { thickenTanzenLettering } from './densho-tanzen.mjs';
+import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.mjs';
 
 const standard = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
 const originals = new URL('../assets/densho/', import.meta.url);
@@ -60,7 +60,9 @@ for (const id of ids) {
       .removeAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
-    adjustedScan = thickenTanzenLettering(data, info.width, info.height);
+    adjustedScan = thickenTanzenLettering(
+      enlargeAnzenLettering(data, info.width, info.height), info.width, info.height,
+    );
   }
   if (!check) manifest.cards[id] = { source: hash(source), assets: {} };
   if (check && manifest.cards[id].source !== hash(source)) throw new Error(`Stale source: ${id}`);

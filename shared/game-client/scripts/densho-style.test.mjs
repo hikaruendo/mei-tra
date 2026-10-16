@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { styleDenshoSvg } from './densho-style.mjs';
 import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
-import { thickenTanzenLettering } from './densho-tanzen.mjs';
+import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.mjs';
 
 const cards = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
 const suitPath = path => {
@@ -81,4 +81,21 @@ test('Tanzen lettering gains a subtle edge without changing other artwork or the
   assert.ok(colour(result, 551, 700)[1] < 255);
   assert.deepEqual(colour(result, 181, 180), [255, 255, 255]);
   assert.deepEqual(colour(pixels, 61, 180), [255, 255, 255]);
+});
+
+test('only the anzen letters enlarge, with the two T letters fixed', () => {
+  const pixels = Buffer.alloc(630 * 945 * 3, 255);
+  const paint = (x, y) => pixels.set([20, 20, 20], (y * 630 + x) * 3);
+  paint(66, 275);
+  paint(548, 665);
+  paint(66, 110);
+  paint(548, 835);
+  const result = enlargeAnzenLettering(pixels, 630, 945);
+  const dark = (buffer, x, y) => buffer[(y * 630 + x) * 3] < 220;
+  assert.ok(dark(result, 66, 300), 'top label extends downwards');
+  assert.ok(dark(result, 548, 640), 'bottom label extends upwards');
+  assert.ok(dark(result, 66, 110), 'top T is unchanged');
+  assert.ok(dark(result, 548, 835), 'bottom T is unchanged');
+  assert.ok(!dark(result, 180, 180), 'illustration is unchanged');
+  assert.ok(dark(pixels, 66, 275), 'source remains untouched');
 });
