@@ -3,6 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { styleDenshoSvg } from './densho-style.mjs';
 import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
+import { thickenTanzenLettering } from './densho-tanzen.mjs';
 
 const cards = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
 const suitPath = path => {
@@ -66,4 +67,18 @@ test('ace corner spades grow vertically and horizontally from their original sha
   assert.ok(isDark(42, 187), 'top-left corner expands both left and up');
   assert.ok(isDark(548, 707), 'bottom-right corner expands both left and up');
   assert.ok(!isDark(200, 200), 'unrelated artwork is unchanged');
+});
+
+test('Tanzen lettering gains a subtle edge without changing other artwork or the source', () => {
+  const pixels = Buffer.alloc(630 * 945 * 3, 255);
+  const paint = (x, y, colour) => pixels.set(colour, (y * 630 + x) * 3);
+  paint(60, 180, [20, 20, 20]);
+  paint(550, 700, [190, 20, 25]);
+  paint(180, 180, [20, 20, 20]);
+  const result = thickenTanzenLettering(pixels, 630, 945);
+  const colour = (buffer, x, y) => [...buffer.subarray((y * 630 + x) * 3, (y * 630 + x) * 3 + 3)];
+  assert.ok(colour(result, 61, 180)[0] < 255);
+  assert.ok(colour(result, 551, 700)[1] < 255);
+  assert.deepEqual(colour(result, 181, 180), [255, 255, 255]);
+  assert.deepEqual(colour(pixels, 61, 180), [255, 255, 255]);
 });

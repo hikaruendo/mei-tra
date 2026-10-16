@@ -10,6 +10,8 @@ All suits, including those within court illustrations, keep their positions.
 The ace of spades scan is preserved as supplied; only its derived renders
 widen the central black spade and proportionally enlarge the two corner spades.
 The gold illustration and lettering retain their original position and proportions.
+The Tanzen scan is also preserved; its derived renders slightly thicken only
+the two vertical letter labels, leaving the figure and suit symbols unchanged.
 
 `shared/game-client/card-art.ts` owns the artwork selection.
 `densho-rendering.json` owns the print-trim rectangles and output widths.
@@ -21,7 +23,8 @@ node shared/game-client/scripts/sync-densho-assets.mjs --check
 ```
 
 The SVG palette, lettering and suit recipe lives in `scripts/densho-style.mjs`;
-the scanned ace adjustment lives in `scripts/densho-ace-spade.mjs`. Rebuild
+the scanned ace adjustment lives in `scripts/densho-ace-spade.mjs`, and the
+Tanzen lettering adjustment in `scripts/densho-tanzen.mjs`. Rebuild
 and verify all 54 images (53 faces plus the back) with:
 
 ```sh
