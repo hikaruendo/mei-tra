@@ -1,12 +1,12 @@
 // Work only on the derived 630px render. The supplied scan remains untouched.
 // The central spade is widened at its edges. The corner spades are enlarged
-// from their original silhouette in both directions to preserve their shape.
+// from their original silhouettes to match the width of the SVG corner suits.
 const WIDTH = 630;
 const HEIGHT = 945;
 const CENTRE = { left: 130, top: 265, right: 500, bottom: 680, radius: 8, minRun: 8 };
 const CORNERS = [
-  { left: 27, top: 168, right: 101, bottom: 253, scale: 1.2 },
-  { left: 523, top: 688, right: 604, bottom: 774, scale: 1.2 },
+  { left: 27, top: 168, right: 101, bottom: 253, scaleX: 1.72, scaleY: 1.2 },
+  { left: 530, top: 688, right: 600, bottom: 774, scaleX: 1.72, scaleY: 1.2 },
 ];
 
 const indexOf = (x, y) => (y * WIDTH + x) * 3;
@@ -38,12 +38,12 @@ function enlargeCornerSpades(pixels, result) {
   for (const corner of CORNERS) {
     const cx = (corner.left + corner.right) / 2;
     const cy = (corner.top + corner.bottom) / 2;
-    const padX = Math.ceil((corner.right - corner.left) * (corner.scale - 1) / 2);
-    const padY = Math.ceil((corner.bottom - corner.top) * (corner.scale - 1) / 2);
+    const padX = Math.ceil((corner.right - corner.left) * (corner.scaleX - 1) / 2);
+    const padY = Math.ceil((corner.bottom - corner.top) * (corner.scaleY - 1) / 2);
     for (let y = corner.top - padY; y < corner.bottom + padY; y++) {
       for (let x = corner.left - padX; x < corner.right + padX; x++) {
-        const sourceX = cx + (x - cx) / corner.scale;
-        const sourceY = cy + (y - cy) / corner.scale;
+        const sourceX = cx + (x - cx) / corner.scaleX;
+        const sourceY = cy + (y - cy) / corner.scaleY;
         const x0 = Math.floor(sourceX);
         const y0 = Math.floor(sourceY);
         const dx = sourceX - x0;

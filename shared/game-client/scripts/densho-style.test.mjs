@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import { styleDenshoSvg } from './densho-style.mjs';
 import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
 import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.mjs';
 
 const cards = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
+const require = createRequire(new URL('../../../mei-tra-mobile/package.json', import.meta.url));
+const sharp = require('sharp');
 const suitPath = path => {
   const data = path.match(/\bd="([^"]+)"/)?.[1];
   return data && data.length < 2000 && path.includes('stroke:#000000');
@@ -67,6 +70,23 @@ test('ace corner spades grow vertically and horizontally from their original sha
   assert.ok(isDark(42, 187), 'top-left corner expands both left and up');
   assert.ok(isDark(548, 707), 'bottom-right corner expands both left and up');
   assert.ok(!isDark(200, 200), 'unrelated artwork is unchanged');
+});
+
+test('ace corner spades match the width of standard spade corners', async () => {
+  const styled = new URL('../assets/densho/styled/', import.meta.url);
+  const widths = async (id, y, left, right) => {
+    const { data, info } = await sharp(new URL(`${id}.webp`, styled).pathname)
+      .raw().toBuffer({ resolveWithObject: true });
+    const xs = [];
+    for (let x = left; x < right; x++) {
+      const at = (y * info.width + x) * info.channels;
+      if (Math.max(data[at], data[at + 1], data[at + 2]) < 80) xs.push(x);
+    }
+    return xs.at(-1) - xs[0] + 1;
+  };
+  for (const [y, left, right] of [[225, 0, 140], [715, 500, 625]]) {
+    assert.ok(Math.abs(await widths('A_S', y, left, right) - await widths('2_S', y, left, right)) <= 3);
+  }
 });
 
 test('Tanzen lettering gains a subtle edge without changing other artwork or the source', () => {

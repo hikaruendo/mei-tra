@@ -8,7 +8,8 @@ design remains unchanged. SVG suit silhouettes use 82% width and 72% height;
 the two corner suits use 90% width and 84% height for legibility at small sizes.
 All suits, including those within court illustrations, keep their positions.
 The ace of spades scan is preserved as supplied; only its derived renders
-widen the central black spade and proportionally enlarge the two corner spades.
+widen the central black spade and enlarge the two corner spades horizontally to
+match the SVG corner suit widths, while keeping their existing height.
 The gold illustration and lettering retain their original position and proportions.
 The Tanzen scan is also preserved; its derived renders enlarge the thin
 `anzen` letters by 20% and slightly thicken the two vertical labels. The large
