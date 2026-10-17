@@ -108,6 +108,20 @@ test('central spade absorbs the scanned grey edge without a dotted outline', () 
   assert.ok(red(480, 450) < 80);
 });
 
+test('rendered ace outline stays continuous behind both gold horns', async () => {
+  const path = new URL('../assets/densho/styled/A_S.webp', import.meta.url);
+  const pixels = await sharp(path.pathname).removeAlpha().raw().toBuffer();
+  const config = JSON.parse(await readFile(new URL('../densho-rendering.json', import.meta.url), 'utf8'));
+  const original = await sharp(new URL('../assets/densho/A_S.jpg', import.meta.url).pathname)
+    .extract(config.originals.A_S).resize(630, 945, { fit: 'fill', kernel: 'lanczos3' }).removeAlpha().raw().toBuffer();
+  const colour = (x, y) => [...pixels.subarray((y * 630 + x) * 3, (y * 630 + x) * 3 + 3)];
+  for (const x of [229, 396]) assert.ok(Math.max(...colour(x, 356)) < 80, `no paper notch at ${x},356`);
+  for (const [x, y] of [[245, 355], [383, 355]]) {
+    const at = (y * 630 + x) * 3;
+    assert.deepEqual(colour(x, y), [...original.subarray(at, at + 3)], 'gold horn is preserved');
+  }
+});
+
 test('central spade tip widens gradually instead of starting with a stepped rim', () => {
   const pixels = Buffer.alloc(630 * 945 * 3, 255);
   const paint = (x, y) => pixels.set([12, 12, 12], (y * 630 + x) * 3);

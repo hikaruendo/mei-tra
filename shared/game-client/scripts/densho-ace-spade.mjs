@@ -45,7 +45,10 @@ function centralExteriorPaper(pixels) {
   const visit = (x, y) => {
     if (x < left || x >= right || y < top || y >= bottom) return;
     const pixel = y * WIDTH + x;
-    if (exterior[pixel] || protectedArt[pixel] || !isNeutralPaper(pixels, pixel * 3)) return;
+    const at = pixel * 3;
+    // Pure paper beside a gold edge is background, not illustration detail.
+    const protectedEdge = protectedArt[pixel] && Math.max(pixels[at], pixels[at + 1], pixels[at + 2]) < 235;
+    if (exterior[pixel] || protectedEdge || !isNeutralPaper(pixels, at)) return;
     exterior[pixel] = 1;
     queue[tail++] = pixel;
   };
@@ -58,6 +61,31 @@ function centralExteriorPaper(pixels) {
     visit(x - 1, y); visit(x + 1, y); visit(x, y - 1); visit(x, y + 1);
   }
   return exterior;
+}
+
+function upperSpadeOutline(pixels) {
+  // The straight upper outline is hidden by the gold horns and wings farther
+  // down. Fit its two edges from unobscured scanlines, then continue the same
+  // outline behind the illustration instead of following its internal ink.
+  const samples = [];
+  for (let y = 300; y <= 345; y++) {
+    const xs = [];
+    for (let x = CENTRE.left; x < CENTRE.right; x++) {
+      if (isSpadeInk(pixels, indexOf(x, y))) xs.push(x);
+    }
+    if (xs.length >= CENTRE.minRun) samples.push({ y, left: xs[0], right: xs.at(-1) });
+  }
+  if (samples.length < 20) return null;
+  const meanY = samples.reduce((sum, row) => sum + row.y, 0) / samples.length;
+  const variance = samples.reduce((sum, row) => sum + (row.y - meanY) ** 2, 0);
+  const fit = edge => {
+    const meanX = samples.reduce((sum, row) => sum + row[edge], 0) / samples.length;
+    const slope = samples.reduce((sum, row) => sum + (row.y - meanY) * (row[edge] - meanX), 0) / variance;
+    return y => Math.round(meanX + slope * (y - meanY));
+  };
+  const left = fit('left');
+  const right = fit('right');
+  return y => [left(y), right(y) + 1];
 }
 
 function cornerInkCoverage(pixels, x, y, corner) {
@@ -138,22 +166,38 @@ export function broadenAceSpadePixels(pixels, width, height) {
   const result = Buffer.from(pixels);
   const coverage = new Uint8Array(WIDTH * HEIGHT);
   const exterior = centralExteriorPaper(pixels);
+  const upperOutline = upperSpadeOutline(pixels);
   const { left, top, right, bottom, radius, minRun } = CENTRE;
   for (let y = top; y < bottom; y++) {
-    for (let x = left; x < right;) {
-      if (!isSpadeInk(pixels, indexOf(x, y))) {
-        x++;
-        continue;
+    const runs = [];
+    if (upperOutline && y >= 300 && y <= 435) {
+      const run = upperOutline(y);
+      runs.push(run);
+      // The gold can also hide paper just inside the original contour. Fill
+      // that background behind the illustration, not just the outer band.
+      for (let x = run[0]; x < run[1]; x++) {
+        const pixel = y * WIDTH + x;
+        if (exterior[pixel]) coverage[pixel] = 255;
       }
-      const start = x;
-      while (x < right && isSpadeInk(pixels, indexOf(x, y))) x++;
-      const runLength = x - start;
+    } else {
+      for (let x = left; x < right;) {
+        if (!isSpadeInk(pixels, indexOf(x, y))) {
+          x++;
+          continue;
+        }
+        const start = x;
+        while (x < right && isSpadeInk(pixels, indexOf(x, y))) x++;
+        runs.push([start, x]);
+      }
+    }
+    for (const [start, end] of runs) {
+      const runLength = end - start;
       // The pointed tip starts as a one-pixel run. Applying the full width
       // only once it reaches minRun leaves a stepped, double-looking apex.
-      const atTip = y < 285 && Math.abs((start + x - 1) / 2 - 313) < 35;
+      const atTip = y < 285 && Math.abs((start + end - 1) / 2 - 313) < 35;
       if (runLength < minRun && !atTip) continue;
       const edgeRadius = atTip ? Math.min(radius, Math.floor(runLength / 2)) : radius;
-      for (const [edge, direction] of [[start, -1], [x - 1, 1]]) {
+      for (const [edge, direction] of [[start, -1], [end - 1, 1]]) {
         // Pool over adjacent scanlines so small gaps in the scanned ink do
         // not become horizontal stripes in the widened silhouette.
         for (let targetY = Math.max(top, y - 1); targetY <= Math.min(bottom - 1, y + 1); targetY++) {

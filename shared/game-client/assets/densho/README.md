@@ -17,6 +17,8 @@ Only paper connected to the exterior of the central spade is eligible for
 widening. Gold pixels and their neighbouring fine outlines are protected.
 The derived outline covers the scan's grey edge pixels and widens gradually
 at its tip, avoiding a doubled or stepped contour.
+The straight upper contour is fitted from unobscured scanlines and continued
+behind the gold horns and wings, so they do not create gaps in the black edge.
 The lower spade keeps a narrow paper outline around the adjacent caption's final
 letter so the word stays distinct from the wider suit.
 The Tanzen scan is also preserved; its derived renders enlarge the thin
