@@ -9,7 +9,6 @@ import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.m
 const standard = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
 const originals = new URL('../assets/densho/', import.meta.url);
 const output = new URL('styled/', originals);
-const web = new URL('../../../mei-tra-frontend/public/cards/densho/styled/', import.meta.url);
 const registry = new URL('../../../mei-tra-mobile/src/lib/densho-card-assets.ts', import.meta.url);
 const revisionPath = new URL('../densho-revision.ts', import.meta.url);
 const manifestPath = new URL('manifest.json', output);
@@ -33,18 +32,16 @@ if (check && await readFile(registry, 'utf8') !== registrySource) throw new Erro
 if (check && Object.keys(manifest.cards).join() !== ids.join()) throw new Error('Densho deck coverage is stale.');
 let sharp;
 if (!check) {
-  const require = createRequire(new URL('../../../mei-tra-mobile/package.json', import.meta.url));
+  const require = createRequire(new URL('../../../mei-tra-frontend/package.json', import.meta.url));
   sharp = require('sharp');
-  for (const dir of [output, web]) {
-    for (const [size] of sizes) await mkdir(new URL(size === 'large' ? './' : `${size}/`, dir), { recursive: true });
-  }
+  for (const [size] of sizes) await mkdir(new URL(size === 'large' ? './' : `${size}/`, output), { recursive: true });
 }
 let total = 0;
 for (const id of ids) {
   const crop = config.originals[id];
   const source = await readFile(crop ? new URL(`${id}.jpg`, originals) : new URL(`${id}.svg`, standard));
-  let adjustedScan;
-  if (!check && id === 'A_S') {
+  let scanEditOverlay;
+  if (!check && (id === 'A_S' || id === 'joker_red')) {
     const width = config.widths.large;
     const { data, info } = await sharp(source)
       .extract(crop)
@@ -52,48 +49,43 @@ for (const id of ids) {
       .removeAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
-    adjustedScan = broadenAceSpadePixels(data, info.width, info.height);
+    const adjusted = id === 'A_S'
+      ? broadenAceSpadePixels(data, info.width, info.height)
+      : thickenTanzenLettering(enlargeAnzenLettering(data, info.width, info.height), info.width, info.height);
+    // Keep only edits in the overlay. Each output size is sampled directly
+    // from the original scan, preserving detail in the untouched illustration.
+    const overlay = Buffer.alloc(info.width * info.height * 4);
+    for (let pixel = 0; pixel < info.width * info.height; pixel++) {
+      const at = pixel * 3;
+      if (data[at] === adjusted[at] && data[at + 1] === adjusted[at + 1] && data[at + 2] === adjusted[at + 2]) continue;
+      overlay.set(adjusted.subarray(at, at + 3), pixel * 4);
+      overlay[pixel * 4 + 3] = 255;
+    }
+    scanEditOverlay = await sharp(overlay, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
   }
-  if (!check && id === 'joker_red') {
-    const width = config.widths.large;
-    const { data, info } = await sharp(source)
-      .extract(crop)
-      .resize(width, width * 1.5, { fit: 'fill', kernel: 'lanczos3' })
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    adjustedScan = thickenTanzenLettering(
-      enlargeAnzenLettering(data, info.width, info.height), info.width, info.height,
-    );
-  }
+  const styledSvg = !check && !crop ? await normalizeCornerSpacing(styleDenshoSvg(source.toString()), sharp) : null;
   if (!check) manifest.cards[id] = { source: hash(source), assets: {} };
   if (check && manifest.cards[id].source !== hash(source)) throw new Error(`Stale source: ${id}`);
   for (const [size, width] of sizes) {
     const file = fileFor(id, size);
     const out = new URL(file, output);
-    const copy = new URL(file, web);
     if (check) {
       const asset = await readFile(out);
       if (manifest.cards[id].assets[size] !== hash(asset)) throw new Error(`Stale densho card: ${file}`);
-      if (!asset.equals(await readFile(copy))) throw new Error(`Web/mobile artwork differs: ${file}`);
       total += asset.length;
     } else {
       // Downsample once at build time, then restore only mild edge contrast at
-      // thumbnail sizes. Adjusted scans use their derived 630px renders.
-      let input;
-      if (adjustedScan) {
-        input = sharp(adjustedScan, { raw: { width: config.widths.large, height: config.widths.large * 1.5, channels: 3 } });
-      } else if (crop) {
-        input = sharp(source).extract(crop);
-      } else {
-        const styled = await normalizeCornerSpacing(styleDenshoSvg(source.toString()), sharp);
-        input = sharp(Buffer.from(styled), { density: 216 });
-      }
+      // thumbnail sizes. Scans always use the original source at each size.
+      const input = crop ? sharp(source).extract(crop) : sharp(Buffer.from(styledSvg), { density: 216 });
       let render = input.resize(width, width * 1.5, { fit: 'fill', kernel: 'lanczos3' }).flatten({ background: '#ffffff' });
+      if (scanEditOverlay) {
+        const base = await render.png().toBuffer();
+        const overlay = await sharp(scanEditOverlay).resize(width, width * 1.5, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
+        render = sharp(await sharp(base).composite([{ input: overlay }]).png().toBuffer());
+      }
       if (size !== 'large') render = render.sharpen({ sigma: 0.4, m1: 0.5, m2: 1, x1: 2, y2: 5, y3: 5 });
       const asset = await render.webp({ lossless: true, effort: 6 }).toBuffer();
       await writeFile(out, asset);
-      await writeFile(copy, asset);
       manifest.cards[id].assets[size] = hash(asset);
       total += asset.length;
     }

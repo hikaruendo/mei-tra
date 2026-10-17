@@ -8,7 +8,7 @@ import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
 import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.mjs';
 
 const cards = new URL('../../../mei-tra-frontend/public/cards/', import.meta.url);
-const require = createRequire(new URL('../../../mei-tra-mobile/package.json', import.meta.url));
+const require = createRequire(new URL('../../../mei-tra-frontend/package.json', import.meta.url));
 const sharp = require('sharp');
 const suitPath = path => {
   const data = path.match(/\bd="([^"]+)"/)?.[1];
@@ -71,6 +71,30 @@ test('ace of spades adjustment widens black ink without touching illustration co
   assert.deepEqual(colour(result, 330, 300), [172, 175, 176], 'lettering outside the new silhouette is unchanged');
   assert.ok(colour(result, 320, 300).every(channel => channel < 50));
   assert.deepEqual(colour(result, 400, 300), [255, 255, 255]);
+});
+
+test('ace illustration retains original pixels and direct-sampled detail at every size', async () => {
+  const originals = new URL('../assets/densho/', import.meta.url);
+  const config = JSON.parse(await readFile(new URL('../densho-rendering.json', import.meta.url), 'utf8'));
+  for (const [size, width] of Object.entries(config.widths)) {
+    let control = sharp(new URL('A_S.jpg', originals).pathname)
+      .extract(config.originals.A_S)
+      .resize(width, width * 1.5, { fit: 'fill', kernel: 'lanczos3' })
+      .flatten({ background: '#ffffff' });
+    if (size !== 'large') control = control.sharpen({ sigma: 0.4, m1: 0.5, m2: 1, x1: 2, y2: 5, y3: 5 });
+    const expected = await control.removeAlpha().raw().toBuffer();
+    const file = `styled/${size === 'large' ? '' : `${size}/`}A_S.webp`;
+    const actual = await sharp(new URL(file, originals).pathname).removeAlpha().raw().toBuffer();
+    // Includes fine black/grey outlines, not just saturated gold pixels.
+    for (let y = Math.ceil(370 * width / 630); y < Math.floor(580 * width / 630); y++) {
+      const left = (y * width + Math.ceil(245 * width / 630)) * 3;
+      const right = (y * width + Math.floor(385 * width / 630)) * 3;
+      let maxDifference = 0;
+      for (let at = left; at < right; at++) maxDifference = Math.max(maxDifference, Math.abs(actual[at] - expected[at]));
+      // Thumbnail filtering can round one channel value beside the edit mask.
+      assert.ok(maxDifference <= (size === 'large' ? 0 : 1), `${size}: illustration row ${y}, difference ${maxDifference}`);
+    }
+  }
 });
 
 test('central spade absorbs the scanned grey edge without a dotted outline', () => {

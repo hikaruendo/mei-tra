@@ -24,6 +24,42 @@ const isNeutralPaper = (pixels, index) => {
     && Math.max(red, green, blue) - Math.min(red, green, blue) < 16;
 };
 
+function centralExteriorPaper(pixels) {
+  const { left, top, right, bottom } = CENTRE;
+  const protectedArt = new Uint8Array(WIDTH * HEIGHT);
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const at = indexOf(x, y);
+      // Preserve the whole gold illustration, including the antialiased
+      // black/grey line edges beside its coloured pixels.
+      if (pixels[at] <= pixels[at + 1] + 15 || pixels[at + 1] <= pixels[at + 2] + 15) continue;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) protectedArt[(y + dy) * WIDTH + x + dx] = 1;
+      }
+    }
+  }
+  const exterior = new Uint8Array(WIDTH * HEIGHT);
+  const queue = new Int32Array((right - left) * (bottom - top));
+  let head = 0;
+  let tail = 0;
+  const visit = (x, y) => {
+    if (x < left || x >= right || y < top || y >= bottom) return;
+    const pixel = y * WIDTH + x;
+    if (exterior[pixel] || protectedArt[pixel] || !isNeutralPaper(pixels, pixel * 3)) return;
+    exterior[pixel] = 1;
+    queue[tail++] = pixel;
+  };
+  for (let x = left; x < right; x++) { visit(x, top); visit(x, bottom - 1); }
+  for (let y = top; y < bottom; y++) { visit(left, y); visit(right - 1, y); }
+  while (head < tail) {
+    const pixel = queue[head++];
+    const x = pixel % WIDTH;
+    const y = Math.floor(pixel / WIDTH);
+    visit(x - 1, y); visit(x + 1, y); visit(x, y - 1); visit(x, y + 1);
+  }
+  return exterior;
+}
+
 function cornerInkCoverage(pixels, x, y, corner) {
   if (x < corner.left || x >= corner.right || y < corner.top || y >= corner.bottom) return 0;
   const at = indexOf(x, y);
@@ -101,6 +137,7 @@ export function broadenAceSpadePixels(pixels, width, height) {
   }
   const result = Buffer.from(pixels);
   const coverage = new Uint8Array(WIDTH * HEIGHT);
+  const exterior = centralExteriorPaper(pixels);
   const { left, top, right, bottom, radius, minRun } = CENTRE;
   for (let y = top; y < bottom; y++) {
     for (let x = left; x < right;) {
@@ -124,9 +161,9 @@ export function broadenAceSpadePixels(pixels, width, height) {
             const targetX = edge + direction * distance;
             if (targetX < left || targetX >= right) break;
             const target = indexOf(targetX, targetY);
-            // Add width only into neutral paper or dark edge antialiasing;
-            // coloured illustration pixels are never stretched.
-            if (!isNeutralPaper(pixels, target)) continue;
+            // Only grow into exterior paper. Grey antialiasing on lines
+            // inside the gold illustration must retain its original pixels.
+            if (!exterior[target / 3]) continue;
             const opacity = distance === edgeRadius ? 85 : distance === edgeRadius - 1 ? 170 : 255;
             const pixel = target / 3;
             coverage[pixel] = Math.max(coverage[pixel], opacity);
