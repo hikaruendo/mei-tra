@@ -42,7 +42,12 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
+          node scripts/check-production-pooler-access.mjs
           supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          if [ ! -s supabase/.temp/pooler-url ]; then
+            echo "::error::Supabase link did not save an IPv4 pooler URL. Check Connection Pooling: Read on the scoped token."
+            exit 1
+          fi
           supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --skip-vault --dry-run
           supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --skip-vault --yes
           supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" > migration-list.txt
