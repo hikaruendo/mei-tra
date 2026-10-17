@@ -601,7 +601,11 @@
   "board": {
     "phaseBlow": "Bid",
     "phasePlay": "Play",
+    "phaseRoundEnd": "Round complete",
     "phaseWaiting": "Waiting",
+    "roundResultsReady": "Review the scores",
+    "continueNextRound": "Confirm and start next round",
+    "waitingForRoundHost": "Waiting for the host to confirm",
     "revealBroken": "Replace broken hand",
     "baseSuit": "Lead suit: {suit}",
     "selectBaseSuit": "Choose the lead suit",

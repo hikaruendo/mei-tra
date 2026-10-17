@@ -65,6 +65,7 @@ describe('Chombo report adjudication from room state', () => {
     expect(result.events?.map((event) => event.event)).toEqual([
       'chombo-resolved',
       'round-results',
+      'update-phase',
     ]);
     const resolved = result.events?.find(
       (event) => event.event === 'chombo-resolved',
@@ -72,13 +73,11 @@ describe('Chombo report adjudication from room state', () => {
     expect(resolved?.payload).toEqual(
       expect.objectContaining({ isCorrect: true, awardedTeam: 1 }),
     );
-    expect(result.delayedEvents?.map((event) => event.event)).toContain(
-      'new-round-started',
-    );
+    expect(result.delayedEvents).toBeUndefined();
 
     const nextState = fixture.game.getState();
-    expect(nextState.gamePhase).toBe('blow');
-    expect(nextState.roundNumber).toBe(roundNumber + 1);
+    expect(nextState.gamePhase).toBe('round-end');
+    expect(nextState.roundNumber).toBe(roundNumber);
     // Only the report scores. The fields of the stopped round are not counted.
     expect(nextState.teamScores).toEqual({
       0: { play: 0, total: 0 },
@@ -95,10 +94,8 @@ describe('Chombo report adjudication from room state', () => {
     expect(resolved?.payload).toEqual(
       expect.objectContaining({ isCorrect: false, awardedTeam: 0 }),
     );
-    expect(result.delayedEvents?.map((event) => event.event)).toContain(
-      'new-round-started',
-    );
-    expect(fixture.game.getState().gamePhase).toBe('blow');
+    expect(result.delayedEvents).toBeUndefined();
+    expect(fixture.game.getState().gamePhase).toBe('round-end');
     expect(fixture.game.getState().teamScores).toEqual({
       0: { play: 5, total: 5 },
       1: { play: 0, total: 0 },

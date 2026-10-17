@@ -196,7 +196,7 @@ describe('DeclareOpenUseCase', () => {
       opponent: ['A♣', 'K♣', 'Q♣'],
     };
 
-    it('gives the other team 5 points and deals the next round', async () => {
+    it('gives the other team 5 points and waits for the host', async () => {
       const fixture = await createOpenGame(failingHands, completedFields(4, 3));
       try {
         const roundNumber = fixture.game.getState().roundNumber;
@@ -214,6 +214,7 @@ describe('DeclareOpenUseCase', () => {
         expect(eventNames(result.events)).toEqual([
           'open-declared',
           'round-results',
+          'update-phase',
         ]);
         expect(result.events?.[0].payload).toEqual({
           declarerSeatId: asSeatId('winner'),
@@ -222,17 +223,12 @@ describe('DeclareOpenUseCase', () => {
           awardedTeam: 1,
         });
         expect(result.roundStoppedEarly).toBe(true);
-        expect(eventNames(result.delayedEvents)).toEqual([
-          'round-reset',
-          'new-round-started',
-          'update-turn',
-          'update-phase',
-        ]);
+        expect(result.delayedEvents).toBeUndefined();
         // A failed open is not a chombo, so nothing is left to report.
         expect(playState?.chomboViolations ?? []).toEqual([]);
         expect(fixture.game.getState()).toMatchObject({
-          gamePhase: 'blow',
-          roundNumber: roundNumber + 1,
+          gamePhase: 'round-end',
+          roundNumber,
         });
       } finally {
         await fixture.module.close();
@@ -316,20 +312,13 @@ describe('DeclareOpenUseCase', () => {
         expect(eventNames(result.events)).toEqual([
           'open-declared',
           'round-results',
-        ]);
-        expect(eventNames(result.delayedEvents)).toEqual([
-          'round-reset',
-          'new-round-started',
-          'update-turn',
           'update-phase',
         ]);
-        expect(result.delayedEvents?.[3].payload).toMatchObject({
-          phase: 'blow',
-        });
+        expect(result.delayedEvents).toBeUndefined();
         expect(result.gameOver).toBeUndefined();
         expect(fixture.game.getState()).toMatchObject({
-          gamePhase: 'blow',
-          roundNumber: roundNumber + 1,
+          gamePhase: 'round-end',
+          roundNumber,
         });
       } finally {
         await fixture.module.close();

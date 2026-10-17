@@ -4334,7 +4334,7 @@ describe('Game Use Cases', () => {
       expect(scoreService.calculatePlayPoints).toHaveBeenCalledWith(6, 0);
     });
 
-    it('persists the next round number before starting the next round', async () => {
+    it('persists the finished round without starting the next round', async () => {
       const roomService = createRoomServiceMock();
       const playService = createPlayServiceMock('player-1');
       const scoreService = createScoreServiceMock(2);
@@ -4395,8 +4395,9 @@ describe('Game Use Cases', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(updateState).toHaveBeenNthCalledWith(1, { roundNumber: 2 });
-      expect(roomGameState.transitionPhase).toHaveBeenCalledWith('blow');
+      expect(updateState).not.toHaveBeenCalled();
+      expect(roomGameState.resetRoundState).not.toHaveBeenCalled();
+      expect(roomGameState.transitionPhase).toHaveBeenCalledWith('round-end');
       expect(roomGameState.saveState).toHaveBeenCalled();
     });
 

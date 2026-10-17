@@ -37,8 +37,8 @@ interface CompleteRoundParams extends RoundEndParams {
 }
 
 /**
- * Scores the round for the declaring team, then either ends the game or deals
- * the next round. Returns null when the declaring team cannot be determined.
+ * Scores the round for the declaring team, then either ends the game or waits
+ * for the host to start the next round.
  */
 export async function completeRound(
   params: CompleteRoundParams,
@@ -63,9 +63,8 @@ export async function completeRound(
 }
 
 /**
- * Ends a round that a chombo report or a failed open stopped, the same way as
- * a finished round. Their 5 points are already added, and the fields played so
- * far are not scored.
+ * Ends a round that a chombo report or a failed open stopped. Their 5 points
+ * are already added, and the fields played so far are not scored.
  */
 export function completeRoundAfterChombo(
   params: RoundEndParams,
@@ -78,7 +77,6 @@ async function endRound(
     roomId,
     roomGameState,
     state,
-    room,
     roomService,
     gameEventLogService,
   }: RoundEndParams,
@@ -159,16 +157,20 @@ async function endRound(
     };
   }
 
-  return {
-    events,
-    delayedEvents: await prepareNextRound(
-      roomId,
-      roomGameState,
-      state,
-      room,
-      gameEventLogService,
-    ),
-  };
+  roomGameState.transitionPhase('round-end');
+  await roomGameState.saveState();
+  events.push({
+    scope: 'room',
+    roomId,
+    event: 'update-phase',
+    payload: {
+      phase: 'round-end',
+      scores: state.teamScores,
+      winner: null,
+      currentTrump: null,
+    } satisfies UpdatePhasePayload,
+  });
+  return { events };
 }
 
 function findDeclaringTeam(state: GameState): Team | null {
@@ -258,7 +260,7 @@ function applyPlayPoints(
   ];
 }
 
-async function prepareNextRound(
+export async function startNextRound(
   roomId: string,
   roomGameState: GameStateService,
   state: GameState,
@@ -334,34 +336,30 @@ async function prepareNextRound(
     currentTrump: null,
   };
 
-  const delayedEvents: GatewayEvent[] = [
+  const events: GatewayEvent[] = [
     {
       scope: 'room',
       roomId,
       event: 'round-reset',
       payload: undefined,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'new-round-started',
       payload: newRoundPayload,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'update-turn',
       payload: nextBlowPlayer.seatId,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'update-phase',
       payload: updatePhasePayload,
-      delayMs: 3000,
     },
   ];
 
@@ -382,5 +380,5 @@ async function prepareNextRound(
     },
   });
 
-  return delayedEvents;
+  return events;
 }

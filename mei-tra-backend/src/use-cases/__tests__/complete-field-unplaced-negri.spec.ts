@@ -1,6 +1,9 @@
 import type { RoomSyncPayload } from '@contracts/room';
 import type { ChomboResolvedPayload } from '@contracts/game';
 import { ScoreService } from '../../services/score.service';
+import type { IRoomService } from '../../services/interfaces/room-service.interface';
+import type { IGameEventLogService } from '../../services/interfaces/game-event-log.service.interface';
+import { RoomStatus } from '../../types/room.types';
 import type {
   CompletedField,
   DomainPlayer,
@@ -9,6 +12,7 @@ import type {
 import { asSeatId } from '../../types/identity.types';
 import type { CompleteFieldTrigger } from '../interfaces/play-card.use-case.interface';
 import { createGame } from './chombo-game.fixture';
+import { ConfirmRoundResultsUseCase } from '../confirm-round-results.use-case';
 
 const winner = asSeatId('winner');
 const scoreService = new ScoreService();
@@ -116,6 +120,7 @@ describe('Pro round end with a Negri the winner never placed', () => {
         'field-complete',
         'room-sync',
         'round-results',
+        'update-phase',
       ]);
       const roomSync = result.events?.find(
         (event) => event.event === 'room-sync',
@@ -123,13 +128,11 @@ describe('Pro round end with a Negri the winner never placed', () => {
       expect(
         roomSync.players.find((player) => player.seatId === winner)?.hand,
       ).toEqual([]);
-      expect(result.delayedEvents?.map((event) => event.event)).toContain(
-        'new-round-started',
-      );
+      expect(result.delayedEvents).toBeUndefined();
 
       const state = fixture.game.getState();
-      expect(state.gamePhase).toBe('blow');
-      expect(state.roundNumber).toBe(2);
+      expect(state.gamePhase).toBe('round-end');
+      expect(state.roundNumber).toBe(1);
       // Nine of the ten fields went to the declaring team.
       expect(state.teamScores[0].play).toBe(
         scoreService.calculatePlayPoints(7, 9),
@@ -156,6 +159,52 @@ describe('Pro round end with a Negri the winner never placed', () => {
       expect(state.players.every((player) => player.hand.length === 0)).toBe(
         true,
       );
+    } finally {
+      await fixture.module.close();
+    }
+  });
+
+  it('starts exactly one next round after the host confirms the persisted results', async () => {
+    const { fixture, trigger } = await playLastFieldWithoutNegri();
+    try {
+      Object.assign(fixture.room, {
+        status: RoomStatus.PLAYING,
+        hostSeatId: winner,
+      });
+      await completeLastField(fixture, trigger);
+      const score = fixture.game.getState().teamScores[0].total;
+      const confirm = new ConfirmRoundResultsUseCase(
+        fixture.roomService as unknown as IRoomService,
+        fixture.gameEventLog as unknown as IGameEventLogService,
+      );
+
+      expect(await confirm.execute('room-1', asSeatId('left'))).toMatchObject({
+        success: false,
+        error: 'Only the host can continue the game',
+      });
+      expect(fixture.game.getState().roundNumber).toBe(1);
+
+      const result = await confirm.execute('room-1', winner);
+      expect(result.success).toBe(true);
+      expect(result.events?.map((event) => event.event)).toEqual([
+        'round-reset',
+        'new-round-started',
+        'update-turn',
+        'update-phase',
+      ]);
+      expect(result.events?.every((event) => event.delayMs === undefined)).toBe(
+        true,
+      );
+      expect(fixture.game.getState()).toMatchObject({
+        gamePhase: 'blow',
+        roundNumber: 2,
+      });
+      expect(fixture.game.getState().teamScores[0].total).toBe(score);
+      expect(await confirm.execute('room-1', winner)).toMatchObject({
+        success: false,
+        error: 'Round results are not awaiting confirmation',
+      });
+      expect(fixture.game.getState().roundNumber).toBe(2);
     } finally {
       await fixture.module.close();
     }

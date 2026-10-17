@@ -150,7 +150,13 @@ export interface ChomboViolation {
   isExpired: boolean;
 }
 
-export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
+export type GamePhase =
+  | 'deal'
+  | 'blow'
+  | 'play'
+  | 'round-end'
+  | 'waiting'
+  | null;
 
 export interface GameState {
   version?: number;

@@ -65,6 +65,7 @@ import { ReconnectionUseCase } from './use-cases/reconnection.use-case';
 import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
+import { ConfirmRoundResultsUseCase } from './use-cases/confirm-round-results.use-case';
 import { Room } from './types/room.types';
 import { toRoomContract, toRoomContracts } from './adapters/room-adapters';
 import {
@@ -149,6 +150,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly moderatePlayerUseCase: ModeratePlayerUseCase,
     private readonly shuffleTeamsUseCase: ShuffleTeamsUseCase,
     private readonly updateTeamNamesUseCase: UpdateTeamNamesUseCase,
+    private readonly confirmRoundResultsUseCase: ConfirmRoundResultsUseCase,
     private readonly joinRoomGatewayEffectsService: JoinRoomGatewayEffectsService,
     private readonly disconnectGatewayEffectsService: DisconnectGatewayEffectsService,
     private readonly roomUpdateGatewayEffectsService: RoomUpdateGatewayEffectsService,
@@ -473,6 +475,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (response.roundStoppedEarly) {
+      this.comAutoPlayRecoveryService.clearRoom(roomId);
+    }
+
+    if (response.events?.some((event) => event.event === 'round-results')) {
+      this.clearTurnAckMonitor(roomId);
       this.comAutoPlayRecoveryService.clearRoom(roomId);
     }
 
@@ -1686,6 +1693,52 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.error('Failed to start game', error);
       client.emit('error-message', 'Failed to start game');
       return { success: false, error: 'Failed to start game' };
+    }
+  }
+
+  @SubscribeMessage('confirm-round-results')
+  async handleConfirmRoundResults(client: Socket, data: RoomActionPayload) {
+    this.activityTracker.recordActivity();
+    if (
+      this.spectatorGatewayEffectsService.rejectAction(
+        client,
+        'confirm round results',
+      )
+    ) {
+      return {
+        success: false,
+        error: 'Spectators cannot confirm round results',
+      };
+    }
+    if (
+      await this.rejectInactiveMutatingAction(client, 'confirm round results')
+    ) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    try {
+      const actorSeatId = await this.resolveClientRoomSeatId(
+        data.roomId,
+        client,
+      );
+      const result = await this.roomGameActionQueueService.run(
+        data.roomId,
+        () => this.confirmRoundResultsUseCase.execute(data.roomId, actorSeatId),
+      );
+      if (!result.success) {
+        client.emit(
+          'error-message',
+          result.error ?? 'Failed to continue the game',
+        );
+        return { success: false, error: result.error };
+      }
+      this.dispatchEvents(result.events);
+      this.triggerComAutoPlayAfterEvents(data.roomId, result.events ?? []);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Failed to confirm round results', error);
+      client.emit('error-message', 'Failed to continue the game');
+      return { success: false, error: 'Failed to continue the game' };
     }
   }
 

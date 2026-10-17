@@ -359,7 +359,18 @@ export const GameTable: React.FC<GameTableProps> = ({
           );
         })}
 
-        {isWaiting ? (
+        {gamePhase === 'round-end' ? (
+          <div className={styles.waitingCenter}>
+            <p className={styles.waitingText}>{tRoot('game.roundResultsReady')}</p>
+            {isHost && !isSpectator ? (
+              <button className={styles.startButton} onClick={gameActions.confirmRoundResults}>
+                {tRoot('game.continueNextRound')}
+              </button>
+            ) : (
+              <p className={styles.waitingText}>{tRoot('game.waitingForRoundHost')}</p>
+            )}
+          </div>
+        ) : isWaiting ? (
           // Waiting room: show Start/Leave controls in the center field area
           <div className={styles.waitingCenter}>
             {isHost ? (

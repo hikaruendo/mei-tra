@@ -173,6 +173,30 @@ describe('SupabaseGameStateRepository', () => {
     );
   });
 
+  it('restores the persisted host-confirmation phase after reconnect', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          game_phase: 'round-end',
+          state_data: { ...gameStateRow.state_data, gameOver: null },
+        },
+        roomPlayers: [roomPlayerRow],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    await expect(
+      repository.findByRoomId(gameStateRow.room_id),
+    ).resolves.toMatchObject({
+      gamePhase: 'round-end',
+      roundNumber: 1,
+    });
+  });
+
   it('rejects a malformed load RPC payload at the persistence boundary', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: { gameState: { id: 'incomplete' }, roomPlayers: [] },

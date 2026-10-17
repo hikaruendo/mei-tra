@@ -131,6 +131,7 @@ export interface ClientAckPayloads {
   'shuffle-teams': RoomActionPayload;
   'fill-with-com': RoomActionPayload;
   'start-game': RoomActionPayload;
+  'confirm-round-results': RoomActionPayload;
   'moderate-player': ModeratePlayerPayload;
 }
 
@@ -145,6 +146,7 @@ export interface ClientAckResponses {
   'shuffle-teams': GatewayAck;
   'fill-with-com': GatewayAck;
   'start-game': GatewayAck;
+  'confirm-round-results': GatewayAck;
   'moderate-player': GatewayAck;
 }
 
@@ -180,6 +182,7 @@ export interface ClientToServerEvents {
   'shuffle-teams': (payload: RoomActionPayload, ack?: AckCallback) => void;
   'fill-with-com': (payload: RoomActionPayload, ack?: AckCallback) => void;
   'start-game': (payload: RoomActionPayload, ack?: AckCallback) => void;
+  'confirm-round-results': (payload: RoomActionPayload, ack?: AckCallback) => void;
   'declare-blow': (payload: DeclareBlowPayload) => void;
   'pass-blow': (payload: PassBlowPayload) => void;
   'select-negri': (payload: SelectNegriPayload) => void;

@@ -601,7 +601,11 @@
   "board": {
     "phaseBlow": "吹き",
     "phasePlay": "プレイ",
+    "phaseRoundEnd": "ラウンド終了",
     "phaseWaiting": "待機",
+    "roundResultsReady": "得点を確認してください",
+    "continueNextRound": "確認して次のラウンドへ",
+    "waitingForRoundHost": "ホストの確認を待っています",
     "revealBroken": "ブロークン手札交換",
     "baseSuit": "台札のスーツ: {suit}",
     "selectBaseSuit": "台札のスーツを選択",

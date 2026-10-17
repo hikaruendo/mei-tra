@@ -328,7 +328,7 @@ broken 関連や反則は `ChomboService` や `reveal-broken-hand` のフロー�
 
 `reveal-broken-hand` を受けた server は、公開した手札を `broken-hand-revealed` で全員に送り、5 秒後に配り直して `broken` を送ります。COM の4ジャックも同じ間隔で配り直します。公開中の手札は `revealedHands` に入り、web と mobile はその席の手札を表向きに表示します。`broken` で配り直すと `revealedHands` は空に戻ります。オープンで公開した手札も同じ `revealedHands` で表示し、カードが出されるたびにその札を取り除きます。
 
-`report-chombo` を受けた server は、指摘された違反の候補があれば指摘したチームに、なければ指摘されたチームに 5 点を加えて `chombo-resolved` を送ります。どちらの場合もそこでラウンドを終えます。場の得点は計算せず、`completeRoundAfterChombo` が通常のラウンド終了と同じく `round-results` を送り、目標点に届けば `game-over`、届かなければ 3 秒後に次のラウンドを配ります。gateway は、そのラウンドに残っている field completion と COM の timer を止めてから送ります。
+`report-chombo` を受けた server は、指摘された違反の候補があれば指摘したチームに、なければ指摘されたチームに 5 点を加えて `chombo-resolved` を送ります。どちらの場合もそこでラウンドを終えます。場の得点は計算せず、`completeRoundAfterChombo` が通常のラウンド終了と同じく `round-results` を送り、目標点に届けば `game-over`、届かなければ `round-end` phase を保存してホストの確認を待ちます。gateway は、そのラウンドに残っている field completion と COM の timer を止めてから送ります。
 
 `declare-open` で通らないオープンをすると、server はオープンした席の相手チームに 5 点を加え、`open-declared`（`valid: false` と、点が入った `awardedTeam`）を送ります。これはチョンボではないので、違反の候補は残しません。game history には `open_failed` として記録し、そのあとは chombo の指摘と同じく `completeRoundAfterChombo` でラウンドを終えます。通ったオープンは記録せず、10 章の `completeRound()` で終えます。
 
@@ -388,9 +388,9 @@ round end の処理は `use-cases/helpers/round-completion.helper.ts` の `compl
 
 ### 10.2 次ラウンドへ進む条件
 
-`teamScores.total` のどちらかが `pointsToWin` 以上なら game over、そうでなければ `prepareNextRound()` に進みます。
+`teamScores.total` のどちらかが `pointsToWin` 以上なら game over、そうでなければ `round-end` phase のまま待機します。ホストだけが `confirm-round-results` を送れます。
 
-`prepareNextRound()` では新しい round の初期化と delayed event の返却が行われ、frontend には `new-round-started` や関連 event が通知されます。
+確認を受けた `ConfirmRoundResultsUseCase` が `startNextRound()` で新しい round を一度だけ初期化し、`new-round-started` や関連 event を通知します。待機 phase は永続化されるため、再接続後も確認待ちを再表示します。
 
 ## 11. game over
 

@@ -14,6 +14,8 @@ describe('GamePhaseService', () => {
     expect(() => service.assertTransition(null, 'blow')).not.toThrow();
     expect(() => service.assertTransition('blow', 'play')).not.toThrow();
     expect(() => service.assertTransition('play', 'blow')).not.toThrow();
+    expect(() => service.assertTransition('play', 'round-end')).not.toThrow();
+    expect(() => service.assertTransition('round-end', 'blow')).not.toThrow();
     expect(() => service.assertTransition('waiting', 'blow')).not.toThrow();
   });
 
@@ -30,6 +32,9 @@ describe('GamePhaseService', () => {
       InvalidGamePhaseTransitionError,
     );
     expect(() => service.assertTransition('play', 'deal')).toThrow(
+      InvalidGamePhaseTransitionError,
+    );
+    expect(() => service.assertTransition('round-end', 'play')).toThrow(
       InvalidGamePhaseTransitionError,
     );
   });

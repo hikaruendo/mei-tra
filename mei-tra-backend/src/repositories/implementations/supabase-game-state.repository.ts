@@ -475,6 +475,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       (value.game_phase === 'deal' ||
         value.game_phase === 'blow' ||
         value.game_phase === 'play' ||
+        value.game_phase === 'round-end' ||
         value.game_phase === 'waiting' ||
         value.game_phase === null) &&
       typeof value.round_number === 'number' &&

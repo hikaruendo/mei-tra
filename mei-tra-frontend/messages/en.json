@@ -343,6 +343,9 @@
     "openConfirmTitle": "Declare open?",
     "openConfirmMessage": "Your hand is shown to everyone, and you claim that your team takes every remaining field. If it holds, every remaining field counts for your team and the round ends. If it does not, the other team gets 5 points and the round ends. You cannot take this back.",
     "openConfirm": "Declare open",
+    "roundResultsReady": "Round complete. Review the scores",
+    "continueNextRound": "Confirm and start next round",
+    "waitingForRoundHost": "Waiting for the host to confirm",
     "chomboCorrect": "Correct report. {teamName} gets 5 points and the round ends",
     "chomboIncorrect": "No violation. {teamName} gets 5 points and the round ends",
     "fieldRecoveryRedeal": "The cards were safely redealt after a table inconsistency",
@@ -918,7 +921,7 @@
       "lastTanzenDesc": "Not playing the Joker (tanzen) by your second-to-last card. It is reportable as soon as the Joker is your only card.",
       "lastTanzenExample": "Playing another card with two cards left → Reportable once the Joker is your only card",
       "reportSystem": "Reporting Violations",
-      "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Every report gives 5 points to one of the teams, then the round ends and the next round begins.",
+      "reportSystemDesc": "Only players on the opposing team can report, and only during play in the same round. Every report gives 5 points to one of the teams and ends the round. The host confirms before the next round begins.",
       "reportSystemExample": "Correct report → Reporting team gets 5 points / Report with no violation → Reported team gets 5 points"
     },
     "strategy": {
@@ -947,7 +950,7 @@
       "bonus": "Strength Bonus\nTrump Suit: +100 / Base Suit: +50",
       "jackSystem": "Jack System\nPrimary Jack (Jack of the trump suit) / Secondary Jack (varies by trump)",
       "scoreCalc": "Score Calculation\nY≥X: 0.5×(Y-X)+X-5 points / Y'<'X: Y-X points\n(X=declared sets, Y=fields won)",
-      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen\nCorrect report: reporting team +5 / Report with no violation: reported team +5\nEither way, the round ends and the next round begins",
+      "violations": "Chombo (Pro Mode)\nNegri forget / Wrong suit / Four jacks / Last tanzen\nCorrect report: reporting team +5 / Report with no violation: reported team +5\nEither way, the round ends; the host confirms before the next round",
       "flow": "Game Flow\nDeal -> Bid -> Trick (until 10 fields are complete)",
       "settings": "Basic Settings\n4 players, 2 teams / Opposite seat = partner / Target score is configurable per room / Minimum bid is 6 sets"
     }

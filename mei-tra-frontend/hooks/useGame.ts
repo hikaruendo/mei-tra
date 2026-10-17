@@ -1426,6 +1426,14 @@ export const useGame = () => {
   };
 
   const gameActions = {
+    confirmRoundResults: () => {
+      if (!socket || !currentRoomId || !isHost || gamePhase !== 'round-end') return;
+      socket.emit('confirm-round-results', { roomId: currentRoomId }, (response: { success: boolean; error?: string }) => {
+        if (!response.success) {
+          setNotification({ message: response.error ?? 'Failed to continue the game', type: 'error' });
+        }
+      });
+    },
     declareBlow: () => {
       if (!currentSeatId || whoseTurn !== currentSeatId) {
         setNotification({ message: t('errors.notYourTurnDeclare'), type: 'error' });

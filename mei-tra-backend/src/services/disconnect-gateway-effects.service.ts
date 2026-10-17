@@ -389,7 +389,9 @@ export class DisconnectGatewayEffectsService {
   }
 
   private resolveTimeoutMode(gamePhase: GamePhase): DisconnectTimeoutMode {
-    return gamePhase === 'play' || gamePhase === 'blow'
+    return gamePhase === 'play' ||
+      gamePhase === 'blow' ||
+      gamePhase === 'round-end'
       ? 'convert-to-com'
       : 'remove-player';
   }
