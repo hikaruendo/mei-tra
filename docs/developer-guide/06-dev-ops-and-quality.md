@@ -216,6 +216,8 @@ runbook 詳細は `mei-tra-backend/SUPABASE_OPERATIONS.md` と `mei-tra-backend/
 
 migration検証またはproduction履歴照合が失敗した場合、Fly deployは開始されません。workflowは本番DBを変更せず、production migrationの適用は引き続き`DEPLOYMENT_CHECKLIST.md`に従ってmerge前に行います。Fly deployのbuild contextはrepo root、設定とDockerfileは`mei-tra-backend`配下です。
 
+GitHubの`production`環境に置く`SUPABASE_ACCESS_TOKEN`は、本番プロジェクト限定のscoped tokenを使います。必要な権限は`Project Settings`、`API Keys`、`API Key Secrets`、`Connection Pooling`の各`Read`です。GitHub ActionsのIPv4環境では、CLIが接続先を取得するために`Connection Pooling: Read`も必要です。権限を変える場合は新しいtokenを発行して環境secretを差し替えます。
+
 ### 7.2 auto-scale workflow
 
 `.github/workflows/auto-scale.yml` は 1 時間ごとに走り、`mei-tra-backend/scripts/auto-scale.sh` を実行します。
