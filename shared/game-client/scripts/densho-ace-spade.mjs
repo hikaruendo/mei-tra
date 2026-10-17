@@ -6,7 +6,7 @@ const HEIGHT = 945;
 const CENTRE = { left: 130, top: 265, right: 500, bottom: 680, radius: 8, minRun: 8 };
 const CORNERS = [
   { left: 27, top: 168, right: 101, bottom: 253, scaleX: 1.72, scaleY: 1.2 },
-  { left: 530, top: 688, right: 600, bottom: 774, scaleX: 1.72, scaleY: 1.2 },
+  { left: 530, top: 688, right: 600, bottom: 774, scaleX: 1.72, scaleY: 1.2, besideCaption: true },
 ];
 
 const indexOf = (x, y) => (y * WIDTH + x) * 3;
@@ -32,6 +32,37 @@ function cornerInkCoverage(pixels, x, y, corner) {
   const blue = pixels[at + 2];
   if (isCoolCalligraphy(red, green, blue)) return 0;
   return Math.max(0, Math.min(1, (150 - Math.max(red, green, blue)) / 80));
+}
+
+function keepCaptionLegible(pixels, result) {
+  // The final “y” in the caption ends just inside the enlarged lower spade.
+  // Bring those original ink pixels forward with a three-pixel paper outline.
+  // This keeps both the scanned lettering and the spade silhouette intact.
+  const ink = [];
+  for (let y = 725; y <= 746; y++) {
+    for (let x = 510; x <= 526; x++) {
+      if (isSpadeInk(pixels, indexOf(x, y))) ink.push([x, y]);
+    }
+  }
+  for (const [x, y] of ink) {
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if (dx * dx + dy * dy > 9) continue;
+        const at = indexOf(x + dx, y + dy);
+        result[at] = 255;
+        result[at + 1] = 255;
+        result[at + 2] = 255;
+      }
+    }
+  }
+  for (let y = 723; y <= 748; y++) {
+    for (let x = 508; x <= 528; x++) {
+      const at = indexOf(x, y);
+      if (Math.max(pixels[at], pixels[at + 1], pixels[at + 2]) >= 235) continue;
+      if (isCoolCalligraphy(pixels[at], pixels[at + 1], pixels[at + 2])) continue;
+      result.set(pixels.subarray(at, at + 3), at);
+    }
+  }
 }
 
 function enlargeCornerSpades(pixels, result) {
@@ -61,6 +92,7 @@ function enlargeCornerSpades(pixels, result) {
       }
     }
   }
+  keepCaptionLegible(pixels, result);
 }
 
 export function broadenAceSpadePixels(pixels, width, height) {

@@ -11,6 +11,8 @@ The ace of spades scan is preserved as supplied; only its derived renders
 widen the central black spade and enlarge the two corner spades horizontally to
 match the SVG corner suit widths, while keeping their existing height.
 The gold illustration and lettering retain their original position and proportions.
+The lower spade keeps a narrow paper outline around the adjacent caption's final
+letter so the word stays distinct from the wider suit.
 The Tanzen scan is also preserved; its derived renders enlarge the thin
 `anzen` letters by 20% and slightly thicken the two vertical labels. The large
 `T`, figure, and suit symbols stay unchanged.

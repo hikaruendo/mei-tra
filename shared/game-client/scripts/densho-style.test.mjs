@@ -72,6 +72,27 @@ test('ace corner spades grow vertically and horizontally from their original sha
   assert.ok(!isDark(200, 200), 'unrelated artwork is unchanged');
 });
 
+test('lower ace corner keeps paper around the adjacent caption', () => {
+  const pixels = Buffer.alloc(630 * 945 * 3, 255);
+  const paint = (x, y) => pixels.set([30, 28, 29], (y * 630 + x) * 3);
+  for (let y = 720; y < 741; y++) for (let x = 540; x < 551; x++) paint(x, y);
+  paint(520, 730); // Final letter of the caption, separate in the scan.
+  const result = broadenAceSpadePixels(pixels, 630, 945);
+  const red = (x, y) => result[(y * 630 + x) * 3];
+  assert.equal(red(520, 730), 30);
+  assert.equal(red(523, 730), 255, 'paper gap beside the caption is retained');
+  assert.ok(red(540, 730) < 80, 'the corner suit remains visible beside the caption');
+});
+
+test('rendered ace caption ends in readable ink separated from the lower spade', async () => {
+  const styled = new URL('../assets/densho/styled/A_S.webp', import.meta.url);
+  const { data, info } = await sharp(styled.pathname).raw().toBuffer({ resolveWithObject: true });
+  const red = (x, y) => data[(y * info.width + x) * info.channels];
+  assert.ok(red(523, 726) < 80, 'the final letter remains dark');
+  assert.ok(red(527, 726) > 230, 'paper separates the letter from the spade');
+  assert.ok(red(528, 726) < 80, 'the spade keeps its full width beyond the letter');
+});
+
 test('ace corner spades match the width of standard spade corners', async () => {
   const styled = new URL('../assets/densho/styled/', import.meta.url);
   const widths = async (id, y, left, right) => {
