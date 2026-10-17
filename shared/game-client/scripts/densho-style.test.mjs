@@ -3,6 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { styleDenshoSvg } from './densho-style.mjs';
+import { CORNER_GAP, measureCornerGaps, normalizeCornerSpacing } from './densho-corner-spacing.mjs';
 import { broadenAceSpadePixels } from './densho-ace-spade.mjs';
 import { enlargeAnzenLettering, thickenTanzenLettering } from './densho-tanzen.mjs';
 
@@ -37,6 +38,18 @@ test('court illustration pips remain present while only rank-adjacent pips get c
     .map(path => path.match(/\bid="([^"]+)"/)?.[1]);
   assert.deepEqual(ids('0.9 0.84'), ['use17040', 'use17042']);
   assert.deepEqual(ids('0.82 0.72'), ['path11850', 'path11870']);
+});
+
+test('all SVG cards keep an even visible gap between both ranks and corner suits', async () => {
+  const faces = (await readdir(cards)).filter(file => /^(?:[2-9]|10|J|Q|K|A)_[SHDC]\.svg$/.test(file));
+  assert.equal(faces.length, 52);
+  for (const file of faces) {
+    const source = await readFile(new URL(file, cards), 'utf8');
+    const styled = await normalizeCornerSpacing(styleDenshoSvg(source), sharp);
+    const gaps = await measureCornerGaps(styled, sharp);
+    assert.ok(Math.abs(gaps.top - CORNER_GAP) <= 1, `${file}: top gap ${gaps.top}`);
+    assert.ok(Math.abs(gaps.bottom - CORNER_GAP) <= 1, `${file}: bottom gap ${gaps.bottom}`);
+  }
 });
 
 test('ace of spades adjustment widens black ink without touching illustration colours', () => {

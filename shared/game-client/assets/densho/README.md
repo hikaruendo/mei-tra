@@ -7,6 +7,8 @@ charcoal/crimson ink, muted costume colours and serif rank labels. The standard
 design remains unchanged. SVG suit silhouettes use 82% width and 72% height;
 the two corner suits use 90% width and 84% height for legibility at small sizes.
 All suits, including those within court illustrations, keep their positions.
+The SVG ranks are positioned from their rendered ink bounds so both corner
+rank/suit pairs have a consistent 15px gap at 630px; the source SVGs are untouched.
 The ace of spades scan is preserved as supplied; only its derived renders
 widen the central black spade and enlarge the two corner spades horizontally to
 match the SVG corner suit widths, while keeping their existing height.
@@ -26,7 +28,8 @@ node shared/game-client/scripts/sync-densho-assets.mjs
 node shared/game-client/scripts/sync-densho-assets.mjs --check
 ```
 
-The SVG palette, lettering and suit recipe lives in `scripts/densho-style.mjs`;
+The SVG palette, lettering and suit recipe lives in `scripts/densho-style.mjs`,
+and corner spacing in `scripts/densho-corner-spacing.mjs`;
 the scanned ace adjustment lives in `scripts/densho-ace-spade.mjs`, and the
 Tanzen lettering adjustment in `scripts/densho-tanzen.mjs`. Rebuild
 and verify all 54 images (53 faces plus the back) with:
