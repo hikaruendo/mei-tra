@@ -7,6 +7,7 @@ import { GameDock } from '@/components/game/GameDock';
 import styles from './index.module.scss';
 import { PlayerHand } from '@/components/game/PlayerHand';
 import { GameControls } from '@/components/game/GameControls';
+import { RoundSettlementPanel } from '@/components/game/RoundSettlementPanel';
 import { BlowControls } from '@/components/game/BlowControls';
 import { BlowSpectatorPanel } from '@/components/game/BlowSpectatorPanel';
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
@@ -17,6 +18,7 @@ import { StartPlayerJanken, type RevealSeat } from '@/components/game/StartPlaye
 import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirstTurnReveal';
 import { asSeatId } from '@contracts/ids';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
+import type { RoundSettlement } from '@contracts/game';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -37,6 +39,7 @@ interface GameTableProps {
   numberOfPairs: number;
   setNumberOfPairs: (pairs: number) => void;
   teamScores: TeamScores;
+  roundSettlement?: RoundSettlement | null;
   currentSeatId: string | null;
   currentRoomId: string | null;
   idleSeatIds?: string[];
@@ -85,6 +88,7 @@ export const GameTable: React.FC<GameTableProps> = ({
   numberOfPairs,
   setNumberOfPairs,
   teamScores,
+  roundSettlement = null,
   currentSeatId,
   currentRoomId,
   pointsToWin,
@@ -359,7 +363,25 @@ export const GameTable: React.FC<GameTableProps> = ({
           );
         })}
 
-        {isWaiting ? (
+        {gamePhase === 'round-end' ? (
+          <div className={`${styles.waitingCenter} ${styles.resultsCenter}`}>
+            {roundSettlement ? (
+              <RoundSettlementPanel
+                settlement={roundSettlement}
+                teamNames={teamNames}
+              />
+            ) : (
+              <p className={styles.waitingText}>{tRoot('game.roundResultsReady')}</p>
+            )}
+            {isHost && !isSpectator ? (
+              <button className={styles.startButton} onClick={gameActions.confirmRoundResults}>
+                {tRoot('game.continueNextRound')}
+              </button>
+            ) : (
+              <p className={styles.waitingText}>{tRoot('game.waitingForRoundHost')}</p>
+            )}
+          </div>
+        ) : isWaiting ? (
           // Waiting room: show Start/Leave controls in the center field area
           <div className={styles.waitingCenter}>
             {isHost ? (

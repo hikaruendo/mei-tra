@@ -150,7 +150,13 @@ export interface ChomboViolation {
   isExpired: boolean;
 }
 
-export type GamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
+export type GamePhase =
+  | 'deal'
+  | 'blow'
+  | 'play'
+  | 'round-end'
+  | 'waiting'
+  | null;
 
 export interface GameState {
   version?: number;
@@ -160,6 +166,7 @@ export interface GameState {
   gamePhase: GamePhase;
   deck: string[];
   teamScores: Record<Team, { play: number; total: number }>;
+  roundSettlement?: import('@contracts/game').RoundSettlement | null;
   teamScoreRecords: Record<Team, ScoreRecord[]>;
   blowState: BlowState;
   playState?: PlayState;

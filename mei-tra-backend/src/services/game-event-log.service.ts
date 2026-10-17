@@ -272,7 +272,8 @@ export class GameEventLogService implements IGameEventLogService {
         context.gamePhase === 'waiting' ||
         context.gamePhase === 'deal' ||
         context.gamePhase === 'blow' ||
-        context.gamePhase === 'play'
+        context.gamePhase === 'play' ||
+        context.gamePhase === 'round-end'
           ? context.gamePhase
           : 'waiting',
       currentTurnSeatId:

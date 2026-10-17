@@ -99,14 +99,22 @@ export class ReportChomboUseCase implements IReportChomboUseCase {
       scores: state.teamScores,
     };
     // Every report scores for one of the teams, so the round ends with it.
-    const completion = await completeRoundAfterChombo({
-      roomId: request.roomId,
-      roomGameState,
-      state,
-      room,
-      roomService: this.roomService,
-      gameEventLogService: this.gameEventLogService,
-    });
+    const completion = await completeRoundAfterChombo(
+      {
+        roomId: request.roomId,
+        roomGameState,
+        state,
+        room,
+        roomService: this.roomService,
+        gameEventLogService: this.gameEventLogService,
+      },
+      {
+        roundNumber: state.roundNumber,
+        kind: isCorrect ? 'chombo-correct' : 'chombo-incorrect',
+        awardedTeam,
+        pointsAwarded: 5,
+      },
+    );
 
     return {
       success: true,

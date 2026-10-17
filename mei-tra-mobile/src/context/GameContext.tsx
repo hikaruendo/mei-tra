@@ -156,6 +156,7 @@ type CurrentPlayerAckEvent = Extract<
   | 'fill-with-com'
   | 'shuffle-teams'
   | 'start-game'
+  | 'confirm-round-results'
   | 'moderate-player'
   | 'change-player-team'
 >;
@@ -403,6 +404,7 @@ interface GameContextValue extends MobileState {
   fillWithCOM: () => void;
   shuffleTeams: () => void;
   startGame: () => void;
+  confirmRoundResults: () => void;
   declareBlow: (trumpType: TrumpType, numberOfPairs: number) => void;
   passBlow: () => void;
   selectNegri: (card: string) => void;
@@ -444,6 +446,7 @@ const toMobileGamePatch = (
   currentTurnSeatId: game.currentTurnSeatId,
   blowState: game.blowState,
   teamScores: game.teamScores,
+  roundSettlement: game.roundSettlement,
   negriCard: game.negriCard,
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,
@@ -1399,6 +1402,11 @@ export function GameProvider({ children }: PropsWithChildren) {
     void withCurrentPlayer('start-game');
   }, [withCurrentPlayer]);
 
+  const confirmRoundResults = useCallback(() => {
+    if (stateRef.current.game?.gamePhase !== 'round-end') return;
+    void withCurrentPlayer('confirm-round-results');
+  }, [withCurrentPlayer]);
+
   const emitOneWayAction = useCallback(
     (actionName: string, roomId: string, emit: () => void) => {
       if (!canSendServerAction()) return;
@@ -1613,6 +1621,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       fillWithCOM,
       shuffleTeams,
       startGame,
+      confirmRoundResults,
       declareBlow,
       passBlow,
       selectNegri,
@@ -1679,6 +1688,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       selectNegri,
       shuffleTeams,
       startGame,
+      confirmRoundResults,
       state,
       updateTeamNames,
       watchRoom,

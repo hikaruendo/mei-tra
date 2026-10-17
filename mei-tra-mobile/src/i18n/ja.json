@@ -601,7 +601,22 @@
   "board": {
     "phaseBlow": "吹き",
     "phasePlay": "プレイ",
+    "phaseRoundEnd": "ラウンド終了",
     "phaseWaiting": "待機",
+    "roundResultsReady": "得点を確認してください",
+    "result": {
+      "title": "第{round}ラウンドの得点",
+      "scoreLine": "{team} +{gain}点",
+      "declaration": "宣言{declared}組・獲得{won}組",
+      "openFields": "オープン: 獲得{played}組 + 残り{remaining}組 = {total}組",
+      "successFormula": "({declared} − 5) + ({won} − {declared}) × 0.5 = {points}点",
+      "failedFormula": "未達: {won} − {declared} = {points}点",
+      "chombo-correct": "反則の指摘が成立",
+      "chombo-incorrect": "反則の指摘は不成立",
+      "failed-open": "オープン失敗"
+    },
+    "continueNextRound": "次のラウンド",
+    "waitingForRoundHost": "ホストの確認を待っています",
     "revealBroken": "ブロークン手札交換",
     "baseSuit": "台札のスーツ: {suit}",
     "selectBaseSuit": "台札のスーツを選択",

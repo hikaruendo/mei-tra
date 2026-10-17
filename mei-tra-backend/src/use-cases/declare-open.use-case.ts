@@ -182,11 +182,19 @@ export class DeclareOpenUseCase implements IDeclareOpenUseCase {
       valid: false,
       awardedTeam,
     };
-    const completion = await completeRoundAfterChombo({
-      ...params,
-      roomService: this.roomService,
-      gameEventLogService: this.gameEventLogService,
-    });
+    const completion = await completeRoundAfterChombo(
+      {
+        ...params,
+        roomService: this.roomService,
+        gameEventLogService: this.gameEventLogService,
+      },
+      {
+        roundNumber: state.roundNumber,
+        kind: 'failed-open',
+        awardedTeam,
+        pointsAwarded: FAILED_OPEN_POINTS,
+      },
+    );
 
     return {
       success: true,

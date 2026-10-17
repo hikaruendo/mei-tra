@@ -476,6 +476,7 @@ export class ReconnectionUseCase {
           : null,
         blowState: toBlowStateContract(state.blowState),
         teamScores: state.teamScores,
+        roundSettlement: state.roundSettlement ?? null,
         youSeatId: asSeatId(player.seatId),
         negriCard: state.playState?.negriCard ?? null,
         negriSeatId: state.playState?.negriSeatId

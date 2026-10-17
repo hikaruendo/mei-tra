@@ -601,7 +601,22 @@
   "board": {
     "phaseBlow": "Bid",
     "phasePlay": "Play",
+    "phaseRoundEnd": "Round complete",
     "phaseWaiting": "Waiting",
+    "roundResultsReady": "Review the scores",
+    "result": {
+      "title": "Round {round} score",
+      "scoreLine": "{team} +{gain} points",
+      "declaration": "Bid {declared} sets · won {won} sets",
+      "openFields": "Open: {played} won + {remaining} remaining = {total} sets",
+      "successFormula": "({declared} − 5) + ({won} − {declared}) × 0.5 = {points} points",
+      "failedFormula": "Missed bid: {won} − {declared} = {points} points",
+      "chombo-correct": "Violation confirmed",
+      "chombo-incorrect": "Violation not confirmed",
+      "failed-open": "Open failed"
+    },
+    "continueNextRound": "Next round",
+    "waitingForRoundHost": "Waiting for the host to confirm",
     "revealBroken": "Replace broken hand",
     "baseSuit": "Lead suit: {suit}",
     "selectBaseSuit": "Choose the lead suit",

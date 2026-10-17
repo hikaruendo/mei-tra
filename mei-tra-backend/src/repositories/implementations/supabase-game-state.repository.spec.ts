@@ -173,6 +173,44 @@ describe('SupabaseGameStateRepository', () => {
     );
   });
 
+  it('restores the persisted host-confirmation phase after reconnect', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: {
+        gameState: {
+          ...gameStateRow,
+          game_phase: 'round-end',
+          state_data: {
+            ...gameStateRow.state_data,
+            gameOver: null,
+            roundSettlement: {
+              roundNumber: 1,
+              kind: 'failed-open',
+              awardedTeam: 1,
+              pointsAwarded: 5,
+            },
+          },
+        },
+        roomPlayers: [roomPlayerRow],
+      },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: { rpc },
+    } as unknown as SupabaseService);
+
+    await expect(
+      repository.findByRoomId(gameStateRow.room_id),
+    ).resolves.toMatchObject({
+      gamePhase: 'round-end',
+      roundNumber: 1,
+      roundSettlement: {
+        kind: 'failed-open',
+        awardedTeam: 1,
+        pointsAwarded: 5,
+      },
+    });
+  });
+
   it('rejects a malformed load RPC payload at the persistence boundary', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: { gameState: { id: 'incomplete' }, roomPlayers: [] },
@@ -438,13 +476,29 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.update(
       gameStateRow.room_id,
-      { roundNumber: 2 },
+      {
+        roundNumber: 2,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open',
+          awardedTeam: 1,
+          pointsAwarded: 5,
+        },
+      },
       4,
     );
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
-      p_state_patch: { identitySchemaVersion: 2 },
+      p_state_patch: {
+        identitySchemaVersion: 2,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open',
+          awardedTeam: 1,
+          pointsAwarded: 5,
+        },
+      },
       p_scalar_patch: { roundNumber: 2 },
       p_expected_version: 4,
     });

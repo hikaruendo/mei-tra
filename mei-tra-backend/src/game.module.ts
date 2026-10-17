@@ -19,6 +19,7 @@ import { WatchRoomUseCase } from './use-cases/watch-room.use-case';
 import { CreateRoomUseCase } from './use-cases/create-room.use-case';
 import { LeaveRoomUseCase } from './use-cases/leave-room.use-case';
 import { StartGameUseCase } from './use-cases/start-game.use-case';
+import { ConfirmRoundResultsUseCase } from './use-cases/confirm-round-results.use-case';
 import { TogglePlayerReadyUseCase } from './use-cases/toggle-player-ready.use-case';
 import { ChangePlayerTeamUseCase } from './use-cases/change-player-team.use-case';
 import { FillWithComUseCase } from './use-cases/fill-with-com.use-case';
@@ -70,6 +71,7 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
   controllers: [GameHistoryController],
   providers: [
     GameGateway,
+    ConfirmRoundResultsUseCase,
     ActivityTrackerService,
     AvatarOrphanCleanupService,
     TurnMonitorService,

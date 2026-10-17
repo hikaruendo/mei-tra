@@ -42,6 +42,15 @@
   margin-top: -0.35rem;
 }
 
+.resultsCenter {
+  width: min(100%, 33rem);
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 0.25rem;
+  justify-self: center;
+}
+
 .startButton,
 .leaveButton {
   min-width: 0;

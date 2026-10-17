@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { GamePhase } from '../types/game.types';
 
-type PhaseKey = 'null' | 'deal' | 'blow' | 'play' | 'waiting';
+type PhaseKey = 'null' | 'deal' | 'blow' | 'play' | 'round-end' | 'waiting';
 
 const ALLOWED_PHASE_TRANSITIONS: Record<PhaseKey, readonly GamePhase[]> = {
   null: [null, 'deal', 'blow', 'waiting'],
   deal: ['deal', 'blow', 'waiting', null],
   blow: ['blow', 'play', 'waiting', null],
-  play: ['play', 'blow', 'waiting', null],
+  play: ['play', 'blow', 'round-end', 'waiting', null],
+  'round-end': ['round-end', 'blow', null],
   waiting: ['waiting', 'blow', 'play', null],
 };
 

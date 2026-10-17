@@ -9,7 +9,7 @@ export type Team = 0 | 1;
 
 export type TeamNames = Partial<Record<Team, string>>;
 
-export type GamePhase = 'deal' | 'blow' | 'play' | 'complete' | null;
+export type GamePhase = 'deal' | 'blow' | 'play' | 'round-end' | 'complete' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
@@ -110,6 +110,7 @@ export interface TeamPlayers {
 export type { FirstTurnReveal } from '@meitra/game-client/first-turn-reveal';
 
 export interface GameActions {
+  confirmRoundResults: () => void;
   selectNegri: (card: string) => void;
   playCard: (card: string) => void;
   reportChombo: (violatorSeatId: string, violationType: ChomboViolationType) => void;

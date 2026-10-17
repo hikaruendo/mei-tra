@@ -5,7 +5,11 @@ import { asSeatId } from '../types/identity.types';
 
 type Harness = {
   handleDeclareOpen: GameGateway['handleDeclareOpen'];
+  handleConfirmRoundResults: GameGateway['handleConfirmRoundResults'];
   declareOpenUseCase: { execute: jest.Mock };
+  confirmRoundResultsUseCase: { execute: jest.Mock };
+  activityTracker: { recordActivity: jest.Mock };
+  resolveClientRoomSeatId: jest.Mock;
   processGameOverUseCase: { execute: jest.Mock };
   spectatorGatewayEffectsService: { rejectAction: jest.Mock };
   accountActionGateService: { ensureActiveSocketActor: jest.Mock };
@@ -23,6 +27,11 @@ function createGateway(): Harness {
     ...Array.from({ length: 31 }, () => ({})),
   ) as unknown as Harness;
   gateway.declareOpenUseCase = { execute: jest.fn() };
+  gateway.confirmRoundResultsUseCase = { execute: jest.fn() };
+  gateway.activityTracker = { recordActivity: jest.fn() };
+  gateway.resolveClientRoomSeatId = jest
+    .fn()
+    .mockResolvedValue(asSeatId('seat-1'));
   gateway.processGameOverUseCase = {
     execute: jest.fn().mockResolvedValue(undefined),
   };
@@ -33,6 +42,18 @@ function createGateway(): Harness {
     ensureActiveSocketActor: jest.fn().mockResolvedValue({ allowed: true }),
   };
   gateway.roomGameActionQueueService = new RoomGameActionQueueService();
+  (
+    gateway as unknown as { turnMonitorService: { clearMonitor: jest.Mock } }
+  ).turnMonitorService = {
+    clearMonitor: jest.fn(),
+  };
+  (
+    gateway as unknown as {
+      comAutoPlayRecoveryService: { clearRoom: jest.Mock };
+    }
+  ).comAutoPlayRecoveryService = {
+    clearRoom: jest.fn(),
+  };
   gateway.dispatchEvents = jest.fn();
   gateway.triggerComAutoPlayAfterEvents = jest.fn();
   gateway.closeFinishedRoom = jest.fn().mockResolvedValue(undefined);
@@ -67,32 +88,47 @@ describe('GameGateway open behavior', () => {
     jest.useRealTimers();
   });
 
-  it('broadcasts a valid open and paces COM behind the next round it deals', async () => {
+  it('broadcasts a valid open and waits for host confirmation', async () => {
     const gateway = createGateway();
-    const delayedEvents = [
-      {
-        scope: 'room' as const,
-        roomId: 'room-1',
-        event: 'new-round-started',
-        payload: {},
-        delayMs: 3000,
-      },
-    ];
     gateway.declareOpenUseCase.execute.mockResolvedValue({
       success: true,
       events: openEvents,
-      delayedEvents,
     });
 
     await gateway.handleDeclareOpen(client(), { roomId: 'room-1' });
 
-    expect(gateway.dispatchEvents).toHaveBeenNthCalledWith(1, openEvents);
-    expect(gateway.dispatchEvents).toHaveBeenNthCalledWith(2, delayedEvents);
+    expect(gateway.dispatchEvents).toHaveBeenCalledWith(openEvents);
+    expect(gateway.triggerComAutoPlayAfterEvents).not.toHaveBeenCalled();
+    expect(gateway.processGameOverUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('queues the host confirmation and broadcasts the next round', async () => {
+    const gateway = createGateway();
+    const nextRoundEvents = [
+      {
+        scope: 'room' as const,
+        roomId: 'room-1',
+        event: 'round-reset',
+        payload: undefined,
+      },
+    ];
+    gateway.confirmRoundResultsUseCase.execute.mockResolvedValue({
+      success: true,
+      events: nextRoundEvents,
+    });
+
+    expect(
+      await gateway.handleConfirmRoundResults(client(), { roomId: 'room-1' }),
+    ).toEqual({ success: true });
+    expect(gateway.confirmRoundResultsUseCase.execute).toHaveBeenCalledWith(
+      'room-1',
+      asSeatId('seat-1'),
+    );
+    expect(gateway.dispatchEvents).toHaveBeenCalledWith(nextRoundEvents);
     expect(gateway.triggerComAutoPlayAfterEvents).toHaveBeenCalledWith(
       'room-1',
-      delayedEvents,
+      nextRoundEvents,
     );
-    expect(gateway.processGameOverUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('finishes the game through the game-over flow when a valid open reaches the goal', async () => {

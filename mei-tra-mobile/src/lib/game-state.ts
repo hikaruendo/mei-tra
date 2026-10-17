@@ -95,6 +95,7 @@ export const createStartedGameSnapshot = (
     roomId: payload.roomId,
     players: payload.players,
     gamePhase: 'blow',
+    roundSettlement: null,
     currentField: null,
     currentTurnSeatId: null,
     blowState: createEmptyBlowState(),

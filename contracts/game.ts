@@ -4,7 +4,7 @@ export type Team = 0 | 1;
 
 export type TeamNames = Partial<Record<Team, string>>;
 
-export type TransportGamePhase = 'deal' | 'blow' | 'play' | 'waiting' | null;
+export type TransportGamePhase = 'deal' | 'blow' | 'play' | 'round-end' | 'waiting' | null;
 
 export type TrumpType = 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
 
@@ -85,6 +85,7 @@ export interface GameStatePayload {
   currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
+  roundSettlement?: RoundSettlement | null;
   youSeatId: SeatId | null;
   isSpectator?: boolean;
   negriCard: string | null;
@@ -184,7 +185,28 @@ export interface TurnAckPayload {
 
 export interface RoundResultsPayload {
   scores: TransportTeamScores;
+  settlement: RoundSettlement;
 }
+
+export type RoundSettlement =
+  | {
+      roundNumber: number;
+      kind: 'play' | 'open';
+      declaringTeam: Team;
+      declaredPairs: number;
+      playedFieldsWon: number;
+      awardedUnplayedFields: number;
+      wonFields: number;
+      calculatedPoints: number;
+      awardedTeam: Team;
+      pointsAwarded: number;
+    }
+  | {
+      roundNumber: number;
+      kind: 'chombo-correct' | 'chombo-incorrect' | 'failed-open';
+      awardedTeam: Team;
+      pointsAwarded: number;
+    };
 
 export interface RoundCancelledPayload {
   nextDealerSeatId: SeatId;

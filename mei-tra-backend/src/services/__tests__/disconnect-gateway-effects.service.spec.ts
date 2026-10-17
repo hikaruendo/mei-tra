@@ -208,6 +208,21 @@ describe('DisconnectGatewayEffectsService', () => {
     );
   });
 
+  it('keeps a disconnected round-end seat available for host transfer', () => {
+    const service = new DisconnectGatewayEffectsService(
+      {} as IRoomService,
+      {} as never,
+      membershipServiceStub(),
+    );
+    expect(
+      (
+        service as unknown as {
+          resolveTimeoutMode: (phase: 'round-end') => string;
+        }
+      ).resolveTimeoutMode('round-end'),
+    ).toBe('convert-to-com');
+  });
+
   it('converts lobby players to vacant COM seats on disconnect timeout', async () => {
     const roomGameState = {
       getPlayerConnectionState: jest.fn(() => ({ socketId: '' })),

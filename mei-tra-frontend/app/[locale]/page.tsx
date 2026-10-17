@@ -109,6 +109,7 @@ export default function Home() {
     numberOfPairs = 0,
     setNumberOfPairs,
     teamScores = { 0: { deal: 0, blow: 0, play: 0, total: 0 }, 1: { deal: 0, blow: 0, play: 0, total: 0 } },
+    roundSettlement = null,
     currentSeatId = null,
     notification,
     setNotification,
@@ -255,6 +256,7 @@ export default function Home() {
                   numberOfPairs={numberOfPairs}
                   setNumberOfPairs={setNumberOfPairs}
                   teamScores={teamScores}
+                  roundSettlement={roundSettlement}
                   currentSeatId={currentSeatId}
                   currentRoomId={currentRoomId}
                   isHost={isHost}

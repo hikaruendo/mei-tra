@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { asSeatId } from '@contracts/ids';
 import { GameTable } from '@/components/game/GameTable';
@@ -79,6 +79,7 @@ const teamScores: TeamScores = {
 };
 
 const gameActions: GameActions = {
+  confirmRoundResults: jest.fn(),
   selectNegri: jest.fn(),
   playCard: jest.fn(),
   declareBlow: jest.fn(),
@@ -86,6 +87,47 @@ const gameActions: GameActions = {
   selectBaseSuit: jest.fn(),
   revealBrokenHand: jest.fn(),
 };
+
+describe('GameTable round results', () => {
+  it('shows the server-provided scoring breakdown', () => {
+    renderGameTable({
+      gamePhase: 'round-end',
+      roundSettlement: {
+        roundNumber: 2,
+        kind: 'play',
+        declaringTeam: 0,
+        declaredPairs: 6,
+        playedFieldsWon: 7,
+        awardedUnplayedFields: 0,
+        wonFields: 7,
+        calculatedPoints: 1.5,
+        awardedTeam: 0,
+        pointsAwarded: 1.5,
+      },
+    });
+    expect(screen.getByRole('region', { name: 'title' })).toBeInTheDocument();
+    expect(screen.getByText('successFormula')).toBeInTheDocument();
+  });
+
+  it('lets only the host continue after a round ends', () => {
+    const confirmRoundResults = jest.fn();
+    renderGameTable({
+      gamePhase: 'round-end',
+      isHost: true,
+      gameActions: { ...gameActions, confirmRoundResults },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'game.continueNextRound' }));
+    expect(confirmRoundResults).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('game field')).not.toBeInTheDocument();
+  });
+
+  it('shows guests that the host must confirm', () => {
+    renderGameTable({ gamePhase: 'round-end', isHost: false });
+    expect(screen.getByText('game.waitingForRoundHost')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'game.continueNextRound' })).not.toBeInTheDocument();
+  });
+});
 
 const renderGameTable = (
   overrides: Partial<React.ComponentProps<typeof GameTable>> = {},

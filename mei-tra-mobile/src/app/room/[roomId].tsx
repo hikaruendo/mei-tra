@@ -38,6 +38,7 @@ export default function RoomScreen() {
     gameResult,
     shuffleTeams,
     startGame,
+    confirmRoundResults,
     leaveRoom,
     declareBlow,
     passBlow,
@@ -152,6 +153,7 @@ export default function RoomScreen() {
             game={game}
             isHost={isHost}
             onDeclare={declareBlow}
+            onConfirmRoundResults={confirmRoundResults}
             onLeave={() => void doLeave()}
             onPass={passBlow}
             onPlayCard={playCard}

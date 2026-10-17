@@ -1,5 +1,6 @@
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
+import { RoundSettlementPanel } from '@/components/game/RoundSettlementPanel';
 import {
   type ChomboViolationType,
   type DevChomboScenarioType,
@@ -70,6 +71,7 @@ interface GameBoardProps {
   game: MobileGameSnapshot;
   isHost: boolean;
   onDeclare: (trump: TrumpType, pairs: number) => void;
+  onConfirmRoundResults?: () => void;
   onPass: () => void;
   onSelectNegri: (card: string) => void;
   onDeclareOpen?: () => void;
@@ -98,6 +100,7 @@ export function GameBoard({
   game,
   isHost,
   onDeclare,
+  onConfirmRoundResults = () => undefined,
   onPass,
   onSelectNegri,
   onDeclareOpen = () => undefined,
@@ -291,6 +294,8 @@ export function GameBoard({
       ? t('board.phaseBlow')
       : game.gamePhase === 'play'
         ? t('board.phasePlay')
+        : game.gamePhase === 'round-end'
+          ? t('board.phaseRoundEnd')
         : t('board.phaseWaiting');
   const canDeclareOpen =
     isProMode &&
@@ -499,6 +504,26 @@ export function GameBoard({
             </Text>
           ) : null}
         </View>
+
+        {game.gamePhase === 'round-end' ? (
+          <View style={styles.roundEndPanel}>
+            {game.roundSettlement ? (
+              <RoundSettlementPanel
+                settlement={game.roundSettlement}
+                teamNames={game.teamNames}
+              />
+            ) : (
+              <Text style={styles.roundEndText}>{t('board.roundResultsReady')}</Text>
+            )}
+            {isHost && !game.isSpectator ? (
+              <Button disabled={actionsDisabled} onPress={onConfirmRoundResults} testID="confirm-round-results">
+                {t('board.continueNextRound')}
+              </Button>
+            ) : (
+              <Text style={styles.roundEndText}>{t('board.waitingForRoundHost')}</Text>
+            )}
+          </View>
+        ) : null}
 
         {!isProMode && showStrength && currentTrump ? (
           <View style={styles.strengthPanel}>
@@ -1302,6 +1327,18 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  roundEndPanel: {
+    alignItems: 'center',
+    gap: 12,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: colors.panel,
+  },
+  roundEndText: {
+    color: colors.text,
+    fontSize: 16,
+    textAlign: 'center',
   },
   pausedOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -150,6 +150,53 @@ describe('GameBoard interactions', () => {
     jest.restoreAllMocks();
   });
 
+  it('shows the round confirmation only to the host', async () => {
+    const onConfirmRoundResults = jest.fn();
+    const props = {
+      game: {
+        ...game,
+        gamePhase: 'round-end' as const,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open' as const,
+          awardedTeam: 1 as const,
+          pointsAwarded: 5,
+        },
+      },
+      onConfirmRoundResults,
+      onDeclare: jest.fn(),
+      onLeave: jest.fn(),
+      onPass: jest.fn(),
+      onPlayCard: jest.fn(),
+      onReplaceWithCOM: jest.fn(),
+      onSelectBaseSuit: jest.fn(),
+      onSelectNegri: jest.fn(),
+    };
+    let renderer!: {
+      root: {
+        findByProps: (props: Record<string, unknown>) => { props: { onPress: () => void } };
+        findAllByProps: (props: Record<string, unknown>) => unknown[];
+      };
+      update: (element: React.ReactElement) => void;
+      unmount: () => void;
+    };
+    await act(async () => {
+      renderer = TestRenderer.create(<GameBoard {...props} isHost />) as unknown as typeof renderer;
+    });
+
+    await act(async () => {
+      renderer.root.findByProps({ testID: 'confirm-round-results' }).props.onPress();
+    });
+    expect(renderer.root.findAllByProps({ testID: 'round-settlement' }).length).toBeGreaterThan(0);
+    expect(onConfirmRoundResults).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      renderer.update(<GameBoard {...props} isHost={false} />);
+    });
+    expect(renderer.root.findAllByProps({ testID: 'confirm-round-results' })).toHaveLength(0);
+    await act(async () => renderer.unmount());
+  });
+
   it('plays selection sounds for a new card, but not cancellation', async () => {
     const onCardSelection = jest.fn();
     const onCancel = jest.fn();

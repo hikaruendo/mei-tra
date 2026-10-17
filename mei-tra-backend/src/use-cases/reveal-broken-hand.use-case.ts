@@ -187,7 +187,7 @@ export class RevealBrokenHandUseCase implements IRevealBrokenHandUseCase {
           : 0;
       const firstBlowPlayer = nextState.players[firstBlowIndex];
 
-      // 次のラウンドの吹き始め (round-completion.helper の prepareNextRound) は
+      // 次のラウンドの吹き始め (round-completion.helper の startNextRound) は
       // currentBlowIndex から導かれるので、進めた値を書き戻す必要がある。
       nextState.blowState.currentBlowIndex = firstBlowIndex;
       setCurrentSeat(nextState, firstBlowPlayer?.seatId ?? null);

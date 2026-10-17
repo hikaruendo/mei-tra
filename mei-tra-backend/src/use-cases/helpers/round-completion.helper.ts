@@ -2,6 +2,7 @@ import type {
   GameOverPayload,
   NewRoundStartedPayload,
   RoundResultsPayload,
+  RoundSettlement,
   UpdatePhasePayload,
 } from '@contracts/game';
 import { GameStateService } from '../../services/game-state.service';
@@ -37,8 +38,8 @@ interface CompleteRoundParams extends RoundEndParams {
 }
 
 /**
- * Scores the round for the declaring team, then either ends the game or deals
- * the next round. Returns null when the declaring team cannot be determined.
+ * Scores the round for the declaring team, then either ends the game or waits
+ * for the host to start the next round.
  */
 export async function completeRound(
   params: CompleteRoundParams,
@@ -53,24 +54,40 @@ export async function completeRound(
     remainingFieldsWinnerTeam === declaringTeam
       ? countRemainingFields(state)
       : 0;
-  applyPlayPoints(
+  const playedFieldsWon = countWonFields(state, declaringTeam);
+  const wonFields = playedFieldsWon + unplayedWonFields;
+  const calculatedPoints = applyPlayPoints(
     state,
     declaringTeam,
-    countWonFields(state, declaringTeam) + unplayedWonFields,
+    wonFields,
     scoreService,
   );
-  return endRound(params, declaringTeam);
+  const declaration = state.blowState.currentHighestDeclaration;
+  const settlement: RoundSettlement = {
+    roundNumber: state.roundNumber,
+    kind: remainingFieldsWinnerTeam === declaringTeam ? 'open' : 'play',
+    declaringTeam,
+    declaredPairs: declaration?.numberOfPairs ?? 0,
+    playedFieldsWon,
+    awardedUnplayedFields: unplayedWonFields,
+    wonFields,
+    calculatedPoints,
+    awardedTeam:
+      calculatedPoints >= 0 ? declaringTeam : ((1 - declaringTeam) as Team),
+    pointsAwarded: Math.abs(calculatedPoints),
+  };
+  return endRound(params, declaringTeam, settlement);
 }
 
 /**
- * Ends a round that a chombo report or a failed open stopped, the same way as
- * a finished round. Their 5 points are already added, and the fields played so
- * far are not scored.
+ * Ends a round that a chombo report or a failed open stopped. Their 5 points
+ * are already added, and the fields played so far are not scored.
  */
 export function completeRoundAfterChombo(
   params: RoundEndParams,
+  settlement: RoundSettlement,
 ): Promise<RoundCompletion> {
-  return endRound(params, findDeclaringTeam(params.state));
+  return endRound(params, findDeclaringTeam(params.state), settlement);
 }
 
 async function endRound(
@@ -78,12 +95,13 @@ async function endRound(
     roomId,
     roomGameState,
     state,
-    room,
     roomService,
     gameEventLogService,
   }: RoundEndParams,
   declaringTeam: Team | null,
+  settlement: RoundSettlement,
 ): Promise<RoundCompletion> {
+  state.roundSettlement = settlement;
   await gameEventLogService?.log({
     roomId,
     actionType: 'round_completed',
@@ -101,6 +119,7 @@ async function endRound(
 
   const roundResultsPayload: RoundResultsPayload = {
     scores: state.teamScores,
+    settlement,
   };
   const events: GatewayEvent[] = [
     {
@@ -159,16 +178,20 @@ async function endRound(
     };
   }
 
-  return {
-    events,
-    delayedEvents: await prepareNextRound(
-      roomId,
-      roomGameState,
-      state,
-      room,
-      gameEventLogService,
-    ),
-  };
+  roomGameState.transitionPhase('round-end');
+  await roomGameState.saveState();
+  events.push({
+    scope: 'room',
+    roomId,
+    event: 'update-phase',
+    payload: {
+      phase: 'round-end',
+      scores: state.teamScores,
+      winner: null,
+      currentTrump: null,
+    } satisfies UpdatePhasePayload,
+  });
+  return { events };
 }
 
 function findDeclaringTeam(state: GameState): Team | null {
@@ -224,7 +247,7 @@ function applyPlayPoints(
   declaringTeam: Team,
   wonFields: number,
   scoreService: IScoreService,
-) {
+): number {
   const numberOfPairs =
     state.blowState.currentHighestDeclaration?.numberOfPairs || 0;
 
@@ -241,7 +264,7 @@ function applyPlayPoints(
         reason: 'Play points',
       },
     ];
-    return;
+    return playPoints;
   }
 
   const opposingTeam = (1 - declaringTeam) as Team;
@@ -256,9 +279,10 @@ function applyPlayPoints(
       reason: 'Play points',
     },
   ];
+  return playPoints;
 }
 
-async function prepareNextRound(
+export async function startNextRound(
   roomId: string,
   roomGameState: GameStateService,
   state: GameState,
@@ -334,34 +358,30 @@ async function prepareNextRound(
     currentTrump: null,
   };
 
-  const delayedEvents: GatewayEvent[] = [
+  const events: GatewayEvent[] = [
     {
       scope: 'room',
       roomId,
       event: 'round-reset',
       payload: undefined,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'new-round-started',
       payload: newRoundPayload,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'update-turn',
       payload: nextBlowPlayer.seatId,
-      delayMs: 3000,
     },
     {
       scope: 'room',
       roomId,
       event: 'update-phase',
       payload: updatePhasePayload,
-      delayMs: 3000,
     },
   ];
 
@@ -382,5 +402,5 @@ async function prepareNextRound(
     },
   });
 
-  return delayedEvents;
+  return events;
 }
