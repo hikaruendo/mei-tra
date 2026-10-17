@@ -1,5 +1,5 @@
 {
-  "recipe": "8ca2b8340aa823f14bed75a8020794742d75787bc993305e1297a00d3c2b3d31",
+  "recipe": "d23823951d918f3fb8d0a8c8dcfc415096c36933032c3cdf5a386d62901a7f9d",
   "cards": {
     "10_C": {
       "source": "244ea95196fee4b41ee807f0bc7d370a135ec728f1696d0e8c841097379946ff",
@@ -316,9 +316,9 @@
     "A_S": {
       "source": "d52470cba860bd6c0b56925fe320cb7d3dab93b3ee1efea3e2f80ead68fa3d75",
       "assets": {
-        "small": "6ca69db8f5ef5fe6581fbbb36698b966c876614aa57d25fb677d948035bbbec0",
-        "medium": "fa3381fa828e60ea27cff9c1370e7d0848c8f55d631e24ab090a502950a98395",
-        "large": "4d744583a18ea57719ce61c82418f123408af1d69c20a6185d4ad27488fc97d3"
+        "small": "15f6e604188f93742a6b3cb05341bf5308380905b028e3fe1245959697863099",
+        "medium": "4fb9f153182812858e0e4bfa37ceffc0177a81d570ed5dcf9e26bae661ac2134",
+        "large": "6827408fffd6c6ecc032a065c4ee7136a08d3b9981bcb4446a3cda03275f3bd9"
       }
     },
     "J_C": {

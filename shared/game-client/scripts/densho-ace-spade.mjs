@@ -17,11 +17,11 @@ const isNeutralPaper = (pixels, index) => {
   const red = pixels[index];
   const green = pixels[index + 1];
   const blue = pixels[index + 2];
-  // The scanned grey calligraphy has a slight cool tint; retain those pixels
-  // even when the wider black silhouette meets the lettering.
+  // The scanned spade edge and calligraphy share a cool grey tint. Inside the
+  // widened silhouette, the black spade must cover both as foreground ink;
+  // otherwise remnants of the old edge form a dotted second outline.
   return Math.min(red, green, blue) > 80
-    && Math.max(red, green, blue) - Math.min(red, green, blue) < 16
-    && !isCoolCalligraphy(red, green, blue);
+    && Math.max(red, green, blue) - Math.min(red, green, blue) < 16;
 };
 
 function cornerInkCoverage(pixels, x, y, corner) {
@@ -110,19 +110,24 @@ export function broadenAceSpadePixels(pixels, width, height) {
       }
       const start = x;
       while (x < right && isSpadeInk(pixels, indexOf(x, y))) x++;
-      if (x - start < minRun) continue;
+      const runLength = x - start;
+      // The pointed tip starts as a one-pixel run. Applying the full width
+      // only once it reaches minRun leaves a stepped, double-looking apex.
+      const atTip = y < 285 && Math.abs((start + x - 1) / 2 - 313) < 35;
+      if (runLength < minRun && !atTip) continue;
+      const edgeRadius = atTip ? Math.min(radius, Math.floor(runLength / 2)) : radius;
       for (const [edge, direction] of [[start, -1], [x - 1, 1]]) {
         // Pool over adjacent scanlines so small gaps in the scanned ink do
         // not become horizontal stripes in the widened silhouette.
         for (let targetY = Math.max(top, y - 1); targetY <= Math.min(bottom - 1, y + 1); targetY++) {
-          for (let distance = 1; distance <= radius; distance++) {
+          for (let distance = 1; distance <= edgeRadius; distance++) {
             const targetX = edge + direction * distance;
             if (targetX < left || targetX >= right) break;
             const target = indexOf(targetX, targetY);
             // Add width only into neutral paper or dark edge antialiasing;
             // coloured illustration pixels are never stretched.
             if (!isNeutralPaper(pixels, target)) continue;
-            const opacity = distance === radius ? 85 : distance === radius - 1 ? 170 : 255;
+            const opacity = distance === edgeRadius ? 85 : distance === edgeRadius - 1 ? 170 : 255;
             const pixel = target / 3;
             coverage[pixel] = Math.max(coverage[pixel], opacity);
           }

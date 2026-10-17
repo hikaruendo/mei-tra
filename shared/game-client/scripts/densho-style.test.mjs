@@ -63,12 +63,37 @@ test('ace of spades adjustment widens black ink without touching illustration co
   for (let x = 300; x < 320; x++) paint(x, 300, [30, 28, 29]);
   paint(299, 300, [190, 151, 62]);
   paint(321, 300, [172, 175, 176]);
+  paint(330, 300, [172, 175, 176]);
   const result = broadenAceSpadePixels(pixels, width, height);
   const colour = (buffer, x, y) => [...buffer.subarray((y * width + x) * 3, (y * width + x) * 3 + 3)];
   assert.deepEqual(colour(result, 299, 300), [190, 151, 62]);
-  assert.deepEqual(colour(result, 321, 300), [172, 175, 176]);
+  assert.ok(colour(result, 321, 300).every(channel => channel < 80), 'the widened spade covers grey ink beneath its new edge');
+  assert.deepEqual(colour(result, 330, 300), [172, 175, 176], 'lettering outside the new silhouette is unchanged');
   assert.ok(colour(result, 320, 300).every(channel => channel < 50));
   assert.deepEqual(colour(result, 400, 300), [255, 255, 255]);
+});
+
+test('central spade absorbs the scanned grey edge without a dotted outline', () => {
+  const pixels = Buffer.alloc(630 * 945 * 3, 255);
+  const paint = (x, y, colour) => pixels.set(colour, (y * 630 + x) * 3);
+  for (let x = 450; x <= 475; x++) paint(x, 450, [12, 12, 12]);
+  paint(476, 450, [156, 160, 159]); // Cool-tinted antialiasing, not calligraphy.
+  const result = broadenAceSpadePixels(pixels, 630, 945);
+  const red = (x, y) => result[(y * 630 + x) * 3];
+  assert.equal(red(476, 450), 12);
+  assert.ok(red(480, 450) < 80);
+});
+
+test('central spade tip widens gradually instead of starting with a stepped rim', () => {
+  const pixels = Buffer.alloc(630 * 945 * 3, 255);
+  const paint = (x, y) => pixels.set([12, 12, 12], (y * 630 + x) * 3);
+  for (let x = 311; x <= 316; x++) paint(x, 274);
+  for (let x = 310; x <= 317; x++) paint(x, 275);
+  const result = broadenAceSpadePixels(pixels, 630, 945);
+  const dark = (x, y) => result[(y * 630 + x) * 3] < 100;
+  assert.ok(dark(308, 274), 'the narrow tip receives a small expansion');
+  assert.ok(!dark(303, 274), 'the full-width rim does not begin abruptly at the tip');
+  assert.ok(dark(307, 275), 'the rim grows with the original silhouette');
 });
 
 test('ace corner spades grow vertically and horizontally from their original shapes', () => {

@@ -13,6 +13,8 @@ The ace of spades scan is preserved as supplied; only its derived renders
 widen the central black spade and enlarge the two corner spades horizontally to
 match the SVG corner suit widths, while keeping their existing height.
 The gold illustration and lettering retain their original position and proportions.
+The central spade's derived outline covers the scan's grey edge pixels and
+widens gradually at its tip, avoiding a doubled or stepped contour.
 The lower spade keeps a narrow paper outline around the adjacent caption's final
 letter so the word stays distinct from the wider suit.
 The Tanzen scan is also preserved; its derived renders enlarge the thin
