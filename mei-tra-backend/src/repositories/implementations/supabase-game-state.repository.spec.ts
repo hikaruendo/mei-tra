@@ -179,7 +179,16 @@ describe('SupabaseGameStateRepository', () => {
         gameState: {
           ...gameStateRow,
           game_phase: 'round-end',
-          state_data: { ...gameStateRow.state_data, gameOver: null },
+          state_data: {
+            ...gameStateRow.state_data,
+            gameOver: null,
+            roundSettlement: {
+              roundNumber: 1,
+              kind: 'failed-open',
+              awardedTeam: 1,
+              pointsAwarded: 5,
+            },
+          },
         },
         roomPlayers: [roomPlayerRow],
       },
@@ -194,6 +203,11 @@ describe('SupabaseGameStateRepository', () => {
     ).resolves.toMatchObject({
       gamePhase: 'round-end',
       roundNumber: 1,
+      roundSettlement: {
+        kind: 'failed-open',
+        awardedTeam: 1,
+        pointsAwarded: 5,
+      },
     });
   });
 
@@ -462,13 +476,29 @@ describe('SupabaseGameStateRepository', () => {
 
     const state = await repository.update(
       gameStateRow.room_id,
-      { roundNumber: 2 },
+      {
+        roundNumber: 2,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open',
+          awardedTeam: 1,
+          pointsAwarded: 5,
+        },
+      },
       4,
     );
 
     expect(rpc).toHaveBeenCalledWith('atomic_update_game_state', {
       p_room_id: gameStateRow.room_id,
-      p_state_patch: { identitySchemaVersion: 2 },
+      p_state_patch: {
+        identitySchemaVersion: 2,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open',
+          awardedTeam: 1,
+          pointsAwarded: 5,
+        },
+      },
       p_scalar_patch: { roundNumber: 2 },
       p_expected_version: 4,
     });

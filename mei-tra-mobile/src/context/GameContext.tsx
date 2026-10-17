@@ -446,6 +446,7 @@ const toMobileGamePatch = (
   currentTurnSeatId: game.currentTurnSeatId,
   blowState: game.blowState,
   teamScores: game.teamScores,
+  roundSettlement: game.roundSettlement,
   negriCard: game.negriCard,
   negriSeatId: game.negriSeatId,
   revealedAgari: game.revealedAgari,

@@ -153,7 +153,16 @@ describe('GameBoard interactions', () => {
   it('shows the round confirmation only to the host', async () => {
     const onConfirmRoundResults = jest.fn();
     const props = {
-      game: { ...game, gamePhase: 'round-end' as const },
+      game: {
+        ...game,
+        gamePhase: 'round-end' as const,
+        roundSettlement: {
+          roundNumber: 1,
+          kind: 'failed-open' as const,
+          awardedTeam: 1 as const,
+          pointsAwarded: 5,
+        },
+      },
       onConfirmRoundResults,
       onDeclare: jest.fn(),
       onLeave: jest.fn(),
@@ -178,6 +187,7 @@ describe('GameBoard interactions', () => {
     await act(async () => {
       renderer.root.findByProps({ testID: 'confirm-round-results' }).props.onPress();
     });
+    expect(renderer.root.findAllByProps({ testID: 'round-settlement' }).length).toBeGreaterThan(0);
     expect(onConfirmRoundResults).toHaveBeenCalledTimes(1);
 
     await act(async () => {

@@ -211,6 +211,11 @@ describe('DeclareOpenUseCase', () => {
         const { teamScores, playState } = fixture.game.getState();
         expect(teamScores[0].total).toBe(0);
         expect(teamScores[1].total).toBe(5);
+        expect(fixture.game.getState().roundSettlement).toMatchObject({
+          kind: 'failed-open',
+          awardedTeam: 1,
+          pointsAwarded: 5,
+        });
         expect(eventNames(result.events)).toEqual([
           'open-declared',
           'round-results',
@@ -309,6 +314,14 @@ describe('DeclareOpenUseCase', () => {
           scoreService.calculatePlayPoints(7, 7),
         );
         expect(teamScores[1].total).toBe(0);
+        expect(fixture.game.getState().roundSettlement).toMatchObject({
+          kind: 'open',
+          declaredPairs: 7,
+          playedFieldsWon: 4,
+          awardedUnplayedFields: 3,
+          wonFields: 7,
+          calculatedPoints: 2,
+        });
         expect(eventNames(result.events)).toEqual([
           'open-declared',
           'round-results',

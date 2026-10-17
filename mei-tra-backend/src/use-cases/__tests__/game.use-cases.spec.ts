@@ -4643,6 +4643,13 @@ describe('Game Use Cases', () => {
       expect(state.teamScoreRecords[0]).toEqual([
         expect.objectContaining({ points: 2, reason: 'Play points' }),
       ]);
+      expect(roomGameState.getState().roundSettlement).toMatchObject({
+        kind: 'play',
+        declaringTeam: 1,
+        calculatedPoints: -2,
+        awardedTeam: 0,
+        pointsAwarded: 2,
+      });
     });
   });
 

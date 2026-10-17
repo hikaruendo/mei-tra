@@ -16,6 +16,65 @@ const createPlayer = (seatId: string, hand: string[]): PlayerContract => ({
 });
 
 describe('reduceGameEvent', () => {
+  it('keeps the server settlement through round end and clears it for the next hand', () => {
+    const settlement = {
+      roundNumber: 1,
+      kind: 'play' as const,
+      declaringTeam: 0 as const,
+      declaredPairs: 6,
+      playedFieldsWon: 7,
+      awardedUnplayedFields: 0,
+      wonFields: 7,
+      calculatedPoints: 1.5,
+      awardedTeam: 0 as const,
+      pointsAwarded: 1.5,
+    };
+    const afterResult = reduceGameEvent(createEmptyGameEventState(), {
+      type: 'round-results',
+      payload: {
+        scores: {
+          0: { play: 1.5, total: 1.5 },
+          1: { play: 0, total: 0 },
+        },
+        settlement,
+      },
+    });
+    expect(afterResult.roundSettlement).toEqual(settlement);
+    expect(createGameEventStateFromSnapshot({
+      players: [],
+      gamePhase: 'round-end',
+      currentField: null,
+      currentTurnSeatId: null,
+      blowState: afterResult.blowState,
+      teamScores: afterResult.teamScores,
+      roundSettlement: settlement,
+      youSeatId: null,
+      negriCard: null,
+      negriSeatId: null,
+      fields: [],
+      roomId: 'room-1',
+      hostSeatId: asSeatId('seat-1'),
+      pointsToWin: 20,
+    }).roundSettlement).toEqual(settlement);
+    const nextRound = reduceGameEvent(afterResult, {
+      type: 'new-round-started',
+      payload: {
+        players: [],
+        currentTurnSeatId: asSeatId('seat-1'),
+        gamePhase: 'blow',
+        currentField: null,
+        completedFields: [],
+        negriCard: null,
+        negriSeatId: null,
+        revealedAgari: null,
+        currentTrump: null,
+        currentHighestDeclaration: null,
+        blowDeclarations: [],
+      },
+    });
+    expect(nextRound.roundSettlement).toBeNull();
+  });
+
   it('applies chombo result scores to the shared game state', () => {
     const state = createEmptyGameEventState();
 

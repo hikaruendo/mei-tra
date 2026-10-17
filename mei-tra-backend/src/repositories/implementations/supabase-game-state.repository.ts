@@ -108,6 +108,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
               canonicalGameState.pendingBrokenHandReveal,
             ),
             gameOver: canonicalGameState.gameOver ?? null,
+            roundSettlement: canonicalGameState.roundSettlement ?? null,
           }),
           current_seat_id: canonicalGameState.currentSeatId,
           game_phase: canonicalGameState.gamePhase,
@@ -283,6 +284,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     }
     if (gameState.gameOver !== undefined) {
       patch.gameOver = gameState.gameOver;
+    }
+    if (gameState.roundSettlement !== undefined) {
+      patch.roundSettlement = gameState.roundSettlement;
     }
 
     return toJsonObject(patch);
@@ -630,6 +634,8 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         null) as GameState['pendingBrokenHandReveal'],
       agari: (stateData.agari ?? undefined) as GameState['agari'],
       gameOver: (stateData.gameOver ?? null) as GameState['gameOver'],
+      roundSettlement: (stateData.roundSettlement ??
+        null) as GameState['roundSettlement'],
       roundNumber: dbGameState.round_number,
       pointsToWin: dbGameState.points_to_win,
     });

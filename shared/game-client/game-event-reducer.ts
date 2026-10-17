@@ -17,6 +17,7 @@ import type {
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
+  RoundSettlement,
   TransportGamePhase,
   TransportTeamScores,
   UpdatePhasePayload,
@@ -32,6 +33,7 @@ export interface GameEventState {
   currentField: FieldContract | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
+  roundSettlement: RoundSettlement | null;
   negriCard: string | null;
   negriSeatId: SeatId | null;
   revealedAgari: string | null;
@@ -79,6 +81,7 @@ export const createEmptyGameEventState = (): GameEventState => ({
     0: { play: 0, total: 0 },
     1: { play: 0, total: 0 },
   },
+  roundSettlement: null,
   negriCard: null,
   negriSeatId: null,
   revealedAgari: null,
@@ -99,6 +102,7 @@ export const createGameEventStateFromSnapshot = (
     currentField: payload.currentField,
     blowState: payload.blowState,
     teamScores: payload.teamScores,
+    roundSettlement: payload.roundSettlement ?? null,
     negriCard: payload.negriCard,
     negriSeatId: payload.negriSeatId,
     revealedAgari: payload.revealedAgari ?? null,
@@ -304,7 +308,11 @@ export const reduceGameEvent = (
       };
     }
     case 'round-results': {
-      return { ...state, teamScores: event.payload.scores };
+      return {
+        ...state,
+        teamScores: event.payload.scores,
+        roundSettlement: event.payload.settlement,
+      };
     }
     case 'new-round-started': {
       const currentTurnSeatId = event.payload.currentTurnSeatId;
@@ -314,6 +322,7 @@ export const reduceGameEvent = (
         players: event.payload.players,
         currentTurnSeatId,
         gamePhase: event.payload.gamePhase,
+        roundSettlement: null,
         currentField: event.payload.currentField,
         fields: dedupeCompletedFields(event.payload.completedFields),
         negriCard: event.payload.negriCard,

@@ -31,6 +31,7 @@ import type {
   RevealAgariPayload,
   RoundCancelledPayload,
   RoundResultsPayload,
+  RoundSettlement,
   SyncGameStatePayload,
   TransportGamePhase,
   TransportTeamScores,
@@ -304,6 +305,7 @@ export const useGame = () => {
     [playSoundEffect],
   );
   const [teamScores, setTeamScores] = useState<TeamScores>(createEmptyTeamScores);
+  const [roundSettlement, setRoundSettlement] = useState<RoundSettlement | null>(null);
   // Blow Phase State
   const [blowDeclarations, setBlowDeclarations] = useState<BlowDeclaration[]>([]);
   const [blowActionHistory, setBlowActionHistory] = useState<BlowAction[]>([]);
@@ -434,6 +436,7 @@ export const useGame = () => {
     playersRef.current = [];
     setPlayers([]);
     setTeamScores(createEmptyTeamScores());
+    setRoundSettlement(null);
     setTeamNames(undefined);
     setCurrentField(null);
     setCompletedFields([]);
@@ -698,6 +701,7 @@ export const useGame = () => {
         (next.blowState.actionHistory ?? []).map(toUiBlowAction),
       );
       setTeamScores(toUiTeamScores(next.teamScores));
+      setRoundSettlement(next.roundSettlement);
       setNegriCard(next.negriCard);
       setNegriSeatId(next.negriSeatId);
       setRevealedAgari(next.revealedAgari);
@@ -838,6 +842,7 @@ export const useGame = () => {
           (blowState.actionHistory ?? []).map(toUiBlowAction),
         );
         setTeamScores(toUiTeamScores(teamScores));
+        setRoundSettlement(payload.roundSettlement ?? null);
         setIsSpectator(Boolean(isSpectator));
         setNegriCard(negriCard);
         setCompletedFields(toUiCompletedFields(fields));
@@ -945,6 +950,7 @@ export const useGame = () => {
         );
         gameOverShownRef.current = null;
         setGameResult(null);
+        setRoundSettlement(null);
         resetBlowState({ preservePlayers: true });
         commitPlayers(nextPlayers);
         syncDisconnectedSeatIdsFromPlayers(nextPlayers);
@@ -1602,6 +1608,7 @@ export const useGame = () => {
     numberOfPairs,
     setNumberOfPairs,
     teamScores,
+    roundSettlement,
     currentSeatId,
     notification,
     setNotification,

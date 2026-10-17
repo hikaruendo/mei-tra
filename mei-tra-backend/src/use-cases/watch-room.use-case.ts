@@ -96,6 +96,7 @@ export class WatchRoomUseCase implements IWatchRoomUseCase {
       currentTurnSeatId: currentTurn ? asSeatId(currentTurn) : null,
       blowState: toBlowStateContract(state.blowState),
       teamScores: state.teamScores,
+      roundSettlement: state.roundSettlement ?? null,
       youSeatId: null,
       isSpectator: true,
       negriCard: state.playState?.negriCard ?? null,

@@ -3,6 +3,7 @@ import type {
   CompletedFieldContract,
   FieldContract,
   GameOverPayload,
+  RoundSettlement,
   PlayerContract,
   TeamNames,
   TransportGamePhase,
@@ -22,6 +23,7 @@ export interface MobileGameSnapshot {
   currentTurnSeatId: SeatId | null;
   blowState: BlowStateContract;
   teamScores: TransportTeamScores;
+  roundSettlement?: RoundSettlement | null;
   youSeatId: SeatId | null;
   isSpectator: boolean;
   negriCard: string | null;

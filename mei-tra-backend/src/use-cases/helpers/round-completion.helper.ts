@@ -2,6 +2,7 @@ import type {
   GameOverPayload,
   NewRoundStartedPayload,
   RoundResultsPayload,
+  RoundSettlement,
   UpdatePhasePayload,
 } from '@contracts/game';
 import { GameStateService } from '../../services/game-state.service';
@@ -53,13 +54,29 @@ export async function completeRound(
     remainingFieldsWinnerTeam === declaringTeam
       ? countRemainingFields(state)
       : 0;
-  applyPlayPoints(
+  const playedFieldsWon = countWonFields(state, declaringTeam);
+  const wonFields = playedFieldsWon + unplayedWonFields;
+  const calculatedPoints = applyPlayPoints(
     state,
     declaringTeam,
-    countWonFields(state, declaringTeam) + unplayedWonFields,
+    wonFields,
     scoreService,
   );
-  return endRound(params, declaringTeam);
+  const declaration = state.blowState.currentHighestDeclaration;
+  const settlement: RoundSettlement = {
+    roundNumber: state.roundNumber,
+    kind: remainingFieldsWinnerTeam === declaringTeam ? 'open' : 'play',
+    declaringTeam,
+    declaredPairs: declaration?.numberOfPairs ?? 0,
+    playedFieldsWon,
+    awardedUnplayedFields: unplayedWonFields,
+    wonFields,
+    calculatedPoints,
+    awardedTeam:
+      calculatedPoints >= 0 ? declaringTeam : ((1 - declaringTeam) as Team),
+    pointsAwarded: Math.abs(calculatedPoints),
+  };
+  return endRound(params, declaringTeam, settlement);
 }
 
 /**
@@ -68,8 +85,9 @@ export async function completeRound(
  */
 export function completeRoundAfterChombo(
   params: RoundEndParams,
+  settlement: RoundSettlement,
 ): Promise<RoundCompletion> {
-  return endRound(params, findDeclaringTeam(params.state));
+  return endRound(params, findDeclaringTeam(params.state), settlement);
 }
 
 async function endRound(
@@ -81,7 +99,9 @@ async function endRound(
     gameEventLogService,
   }: RoundEndParams,
   declaringTeam: Team | null,
+  settlement: RoundSettlement,
 ): Promise<RoundCompletion> {
+  state.roundSettlement = settlement;
   await gameEventLogService?.log({
     roomId,
     actionType: 'round_completed',
@@ -99,6 +119,7 @@ async function endRound(
 
   const roundResultsPayload: RoundResultsPayload = {
     scores: state.teamScores,
+    settlement,
   };
   const events: GatewayEvent[] = [
     {
@@ -226,7 +247,7 @@ function applyPlayPoints(
   declaringTeam: Team,
   wonFields: number,
   scoreService: IScoreService,
-) {
+): number {
   const numberOfPairs =
     state.blowState.currentHighestDeclaration?.numberOfPairs || 0;
 
@@ -243,7 +264,7 @@ function applyPlayPoints(
         reason: 'Play points',
       },
     ];
-    return;
+    return playPoints;
   }
 
   const opposingTeam = (1 - declaringTeam) as Team;
@@ -258,6 +279,7 @@ function applyPlayPoints(
       reason: 'Play points',
     },
   ];
+  return playPoints;
 }
 
 export async function startNextRound(

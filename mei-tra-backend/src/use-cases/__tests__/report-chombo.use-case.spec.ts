@@ -77,6 +77,11 @@ describe('Chombo report adjudication from room state', () => {
 
     const nextState = fixture.game.getState();
     expect(nextState.gamePhase).toBe('round-end');
+    expect(nextState.roundSettlement).toMatchObject({
+      kind: 'chombo-correct',
+      awardedTeam: 1,
+      pointsAwarded: 5,
+    });
     expect(nextState.roundNumber).toBe(roundNumber);
     // Only the report scores. The fields of the stopped round are not counted.
     expect(nextState.teamScores).toEqual({

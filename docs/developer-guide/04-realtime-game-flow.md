@@ -382,7 +382,7 @@ round end の処理は `use-cases/helpers/round-completion.helper.ts` の `compl
 - highest declaration から declaring team を特定
 - wonFields を数える（オープン時は、まだ出していない field をオープンしたチームがすべて取ったものとして数える）
 - `ScoreService.calculatePlayPoints()` を使って play points を加算
-- `round-results` を返す
+- 得点確定時に `roundSettlement`（宣言数、獲得場数、加点先、加点数、通常/オープン/反則などの理由）を state に保存し、`round-results` でも送る
 
 を行います。
 
@@ -390,7 +390,7 @@ round end の処理は `use-cases/helpers/round-completion.helper.ts` の `compl
 
 `teamScores.total` のどちらかが `pointsToWin` 以上なら game over、そうでなければ `round-end` phase のまま待機します。ホストだけが `confirm-round-results` を送れます。
 
-確認を受けた `ConfirmRoundResultsUseCase` が `startNextRound()` で新しい round を一度だけ初期化し、`new-round-started` や関連 event を通知します。待機 phase は永続化されるため、再接続後も確認待ちを再表示します。
+確認を受けた `ConfirmRoundResultsUseCase` が `startNextRound()` で新しい round を一度だけ初期化し、`new-round-started` や関連 event を通知します。待機 phase と得点内訳は永続化されるため、再接続後も同じ確認内容を再表示します。次ラウンドの初期化時に内訳を消します。
 
 ## 11. game over
 
@@ -541,7 +541,7 @@ message は `ChatService.postMessage()` を通って `chat_messages` に永続�
 | `card-played` | seatId, card, field, players | 場と hand 同期 |
 | `field-updated` | Field | Joker base suit 補完など |
 | `field-complete` | winnerSeatId, field, nextSeatId | 1 トリック終了 |
-| `round-results` | scores | round 得点更新 |
+| `round-results` | scores, settlement | round 得点と計算内訳の更新 |
 | `new-round-started` | players, turn, phase, currentField, completedFields など | 次ラウンド準備 |
 | `game-over` | winner, finalScores | ゲーム終了 |
 | `game-paused` / `game-resumed` | message | 進行停止 / 再開 |

@@ -1,0 +1,37 @@
+.panel {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--mt-border-hairline);
+  border-radius: var(--mt-radius);
+  background: var(--mt-surface-raised);
+  color: var(--mt-text-primary);
+  box-shadow: var(--mt-shadow-btn);
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.scoreLine {
+  margin: 0 0 0.75rem;
+  font-weight: 700;
+}
+
+.breakdown {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.breakdown p,
+.formula {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.formula {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--mt-border-hairline);
+  font-weight: 700;
+}

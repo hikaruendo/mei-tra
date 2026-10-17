@@ -137,6 +137,18 @@ describe('Pro round end with a Negri the winner never placed', () => {
       expect(state.teamScores[0].play).toBe(
         scoreService.calculatePlayPoints(7, 9),
       );
+      expect(state.roundSettlement).toEqual({
+        roundNumber: 1,
+        kind: 'play',
+        declaringTeam: 0,
+        declaredPairs: 7,
+        playedFieldsWon: 9,
+        awardedUnplayedFields: 0,
+        wonFields: 9,
+        calculatedPoints: 3,
+        awardedTeam: 0,
+        pointsAwarded: 3,
+      });
     } finally {
       await fixture.module.close();
     }
@@ -200,6 +212,7 @@ describe('Pro round end with a Negri the winner never placed', () => {
         roundNumber: 2,
       });
       expect(fixture.game.getState().teamScores[0].total).toBe(score);
+      expect(fixture.game.getState().roundSettlement).toBeNull();
       expect(await confirm.execute('room-1', winner)).toMatchObject({
         success: false,
         error: 'Round results are not awaiting confirmation',

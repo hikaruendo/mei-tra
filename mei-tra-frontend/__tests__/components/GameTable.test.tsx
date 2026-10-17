@@ -89,6 +89,26 @@ const gameActions: GameActions = {
 };
 
 describe('GameTable round results', () => {
+  it('shows the server-provided scoring breakdown', () => {
+    renderGameTable({
+      gamePhase: 'round-end',
+      roundSettlement: {
+        roundNumber: 2,
+        kind: 'play',
+        declaringTeam: 0,
+        declaredPairs: 6,
+        playedFieldsWon: 7,
+        awardedUnplayedFields: 0,
+        wonFields: 7,
+        calculatedPoints: 1.5,
+        awardedTeam: 0,
+        pointsAwarded: 1.5,
+      },
+    });
+    expect(screen.getByRole('region', { name: 'title' })).toBeInTheDocument();
+    expect(screen.getByText('successFormula')).toBeInTheDocument();
+  });
+
   it('lets only the host continue after a round ends', () => {
     const confirmRoundResults = jest.fn();
     renderGameTable({

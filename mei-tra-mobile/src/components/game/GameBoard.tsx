@@ -1,5 +1,6 @@
 import { ChomboReportPanel } from '@/components/game/ChomboReportPanel';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
+import { RoundSettlementPanel } from '@/components/game/RoundSettlementPanel';
 import {
   type ChomboViolationType,
   type DevChomboScenarioType,
@@ -506,7 +507,14 @@ export function GameBoard({
 
         {game.gamePhase === 'round-end' ? (
           <View style={styles.roundEndPanel}>
-            <Text style={styles.roundEndText}>{t('board.roundResultsReady')}</Text>
+            {game.roundSettlement ? (
+              <RoundSettlementPanel
+                settlement={game.roundSettlement}
+                teamNames={game.teamNames}
+              />
+            ) : (
+              <Text style={styles.roundEndText}>{t('board.roundResultsReady')}</Text>
+            )}
             {isHost && !game.isSpectator ? (
               <Button disabled={actionsDisabled} onPress={onConfirmRoundResults} testID="confirm-round-results">
                 {t('board.continueNextRound')}

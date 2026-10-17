@@ -78,6 +78,7 @@ export class GameStateService implements IGameStateService {
         0: { play: 0, total: 0 },
         1: { play: 0, total: 0 },
       } as Record<Team, TeamScore>,
+      roundSettlement: null,
       gamePhase: null,
       blowState: this.getInitialBlowState(),
       playState: this.getInitialPlayState(),
