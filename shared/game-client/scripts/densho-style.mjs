@@ -24,7 +24,7 @@ function paint(color) {
 }
 
 export function styleDenshoSvg(svg) {
-  return slimSuits(svg)
+  return broadenSuits(svg)
     .replace(/#[0-9a-f]{6}\b/gi, paint)
     .replace(/<text\b[\s\S]*?<\/text>/g, text => text
       .replace(/font-family:Arial/g, 'font-family:Georgia,serif')
@@ -81,15 +81,29 @@ function suitCenter(data) {
   return [0, 1].map(axis => (Math.min(...points.map(point => point[axis])) + Math.max(...points.map(point => point[axis]))) / 2);
 }
 
-function slimSuits(svg) {
-  return svg.replace(/<path\b[\s\S]*?\/>/g, path => {
+function broadenSuits(svg) {
+  const suitPaths = [...svg.matchAll(/<path\b[\s\S]*?\/>/g)]
+    .map(match => {
+      const path = match[0];
+      const data = path.match(/\bd="([^"]+)"/)?.[1];
+      // Suit silhouettes are short stroked paths; court illustrations are
+      // compound paths with thousands of coordinates and retain their size.
+      if (!data || data.length >= 2000 || !path.includes('stroke:#000000')) return null;
+      return { offset: match.index, center: suitCenter(data) };
+    })
+    .filter(Boolean);
+  if (suitPaths.length < 2) throw new Error('Expected two corner suit paths');
+  // Each face has one pip beside the top rank and one beside the bottom rank.
+  // Interior pips, including the two on court illustrations, stay in place.
+  const ordered = [...suitPaths].sort((a, b) => a.center[1] - b.center[1]);
+  const corners = new Set([ordered[0].offset, ordered.at(-1).offset]);
+  return svg.replace(/<path\b[\s\S]*?\/>/g, (path, offset) => {
     const data = path.match(/\bd="([^"]+)"/)?.[1];
-    // Suit silhouettes are short stroked paths; court illustrations are
-    // compound paths with thousands of coordinates and retain their size.
     if (!data || data.length >= 2000 || !path.includes('stroke:#000000')) return path;
     if (/\btransform=/.test(path)) throw new Error('Suit path gained a transform; review scaling');
     const [cx, cy] = suitCenter(data);
-    return path.replace('<path', `<path transform="translate(${cx} ${cy}) scale(0.58 0.72) translate(${-cx} ${-cy})"`)
+    const [sx, sy] = corners.has(offset) ? [0.9, 0.84] : [0.82, 0.72];
+    return path.replace('<path', `<path transform="translate(${cx} ${cy}) scale(${sx} ${sy}) translate(${-cx} ${-cy})"`)
       .replace(/stroke:#[0-9a-f]{6}/gi, 'stroke:none');
   });
 }

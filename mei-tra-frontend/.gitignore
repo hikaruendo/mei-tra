@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# Copied from the canonical shared deck before dev/build.
+/public/cards/densho/
+
 # production
 /build
 
