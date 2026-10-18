@@ -278,6 +278,8 @@
   "room": {
     "title": "Room List",
     "create": "Create Room",
+    "createNormal": "Create standard room",
+    "createPro": "Create pro room (beta)",
     "join": "Join",
     "watch": "Watch",
     "start": "Start Game",

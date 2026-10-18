@@ -263,6 +263,8 @@
     "proMode": "プロモード（ベータ版）",
     "proBadge": "Pro",
     "create": "ルーム作成",
+    "createNormal": "通常の部屋を作成",
+    "createPro": "プロの部屋を作成（ベータ）",
     "joinable": "参加できる部屋",
     "searchRooms": "部屋を検索",
     "searchPlaceholder": "部屋名で検索",

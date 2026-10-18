@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '@/hooks/useRoom';
 import { useBackendStatus } from '@/hooks/useBackendStatus';
@@ -64,7 +64,8 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
-  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const creatingRoomRef = useRef(false);
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
   const effectiveIsConnecting = isConnecting ?? roomSocketConnecting;
@@ -91,26 +92,33 @@ export const RoomList: React.FC<RoomListProps> = ({
     onRoomEntered(currentRoom.id);
   }, [currentRoom?.id, onRoomEntered]);
 
-  const handleCreateRoom = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateRoom = async (gameMode: 'normal' | 'pro') => {
+    if (disableRoomActions || creatingRoomRef.current) return;
+    creatingRoomRef.current = true;
+    setIsCreatingRoom(true);
     const hostDisplayName =
       user?.profile?.displayName?.trim() ||
       user?.profile?.username?.trim() ||
       user?.email?.split('@')[0]?.trim() ||
       'Host';
     const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
-    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
-
-    setNewRoomName('');
-    setPointsToWin(5);
-    setGameMode('normal');
+    try {
+      const created = await createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
+      if (created) {
+        setNewRoomName('');
+        setPointsToWin(5);
+      }
+    } finally {
+      creatingRoomRef.current = false;
+      setIsCreatingRoom(false);
+    }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h2>{t('room.title')}</h2>
-        <form onSubmit={handleCreateRoom} className={styles.createForm}>
+        <form onSubmit={(event) => { event.preventDefault(); void handleCreateRoom('normal'); }} className={styles.createForm}>
           <input
             type="text"
             value={newRoomName}
@@ -128,22 +136,23 @@ export const RoomList: React.FC<RoomListProps> = ({
               className={styles.pointsToWinInput}
             />
           </div>
-          <label className={styles.proModeLabel}>
-            <input
-              className={styles.proModeCheckbox}
-              type="checkbox"
-              checked={gameMode === 'pro'}
-              onChange={(e) => setGameMode(e.target.checked ? 'pro' : 'normal')}
-            />
-            <span>{t('room.proMode')}</span>
-          </label>
-          <button
-            type="submit"
-            className={styles.createButton}
-            disabled={disableRoomActions}
-          >
-            {t('room.create')}
-          </button>
+          <div className={styles.createActions}>
+            <button
+              type="submit"
+              className={styles.createButton}
+              disabled={disableRoomActions || isCreatingRoom}
+            >
+              {t('room.createNormal')}
+            </button>
+            <button
+              type="button"
+              className={`${styles.createButton} ${styles.createProButton}`}
+              disabled={disableRoomActions || isCreatingRoom}
+              onClick={() => { void handleCreateRoom('pro'); }}
+            >
+              {t('room.createPro')}
+            </button>
+          </div>
         </form>
       </div>
 

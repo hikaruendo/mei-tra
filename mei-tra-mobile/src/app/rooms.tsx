@@ -1,11 +1,10 @@
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -44,7 +43,8 @@ export default function RoomsScreen() {
   } = useGame();
   const [roomName, setRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState('5');
-  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
+  const [creatingMode, setCreatingMode] = useState<'normal' | 'pro' | null>(null);
+  const creatingRoomRef = useRef(false);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,23 +93,24 @@ export default function RoomsScreen() {
     user?.email?.split('@')[0] ||
     'Player';
 
-  const handleCreate = async () => {
-    if (submitting || connectionStatus !== 'connected') return;
+  const handleCreate = async (gameMode: 'normal' | 'pro') => {
+    if (submitting || creatingRoomRef.current || connectionStatus !== 'connected') return;
+    creatingRoomRef.current = true;
     setSubmitting(true);
+    setCreatingMode(gameMode);
     try {
       const points = Math.max(1, Number(pointsToWin) || 5);
       const name =
         roomName.trim() || t('rooms.defaultRoomName', { name: displayName });
       const success = await createRoom(name, points, gameMode);
       if (success) {
-        // Web clears the form here too; otherwise the next room silently
-        // inherits the pro toggle.
         setRoomName('');
         setPointsToWin('5');
-        setGameMode('normal');
       }
     } finally {
+      creatingRoomRef.current = false;
       setSubmitting(false);
+      setCreatingMode(null);
     }
   };
 
@@ -190,21 +191,23 @@ export default function RoomsScreen() {
               value={pointsToWin}
             />
           </View>
-          <View style={styles.pointsRow}>
-            <Text style={styles.label}>{t('rooms.proMode')}</Text>
-            <Switch
-              accessibilityLabel={t('rooms.proMode')}
-              onValueChange={(enabled) => setGameMode(enabled ? 'pro' : 'normal')}
-              value={gameMode === 'pro'}
-            />
+          <View style={styles.createActions}>
+            <Button
+              disabled={submitting || connectionStatus !== 'connected'}
+              loading={creatingMode === 'normal'}
+              onPress={() => { void handleCreate('normal'); }}
+            >
+              {t('rooms.createNormal')}
+            </Button>
+            <Button
+              disabled={submitting || connectionStatus !== 'connected'}
+              loading={creatingMode === 'pro'}
+              onPress={() => { void handleCreate('pro'); }}
+              variant="ghost"
+            >
+              {t('rooms.createPro')}
+            </Button>
           </View>
-          <Button
-            disabled={submitting || connectionStatus !== 'connected'}
-            loading={submitting}
-            onPress={handleCreate}
-          >
-            {t('rooms.create')}
-          </Button>
         </View>
 
         <View style={styles.listSection}>
@@ -353,6 +356,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel,
+  },
+  createActions: {
+    gap: 10,
   },
   sectionTitle: {
     color: colors.text,

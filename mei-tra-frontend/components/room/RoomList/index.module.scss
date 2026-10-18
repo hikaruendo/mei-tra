@@ -57,6 +57,16 @@
   }
 }
 
+.createActions {
+  display: flex;
+  gap: 0.625rem;
+  width: 100%;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
 .createButton {
   padding: 0.65rem 1rem;
   background: var(--mt-btn-primary-bg);
@@ -66,7 +76,8 @@
   cursor: pointer;
   font-size: typography.scale(0.95rem);
   font-weight: 500;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 2.75rem;
   transition: all 0.3s ease;
 
@@ -75,27 +86,24 @@
   }
 }
 
-.proModeLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 2.75rem;
-  padding: 0 0.25rem;
+.createProButton {
+  background: transparent;
   color: var(--mt-text-primary);
-  font-size: typography.scale(0.9rem);
-  white-space: nowrap;
+  border: 1px solid var(--mt-accent);
 }
 
-.proModeCheckbox {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
-  accent-color: var(--mt-accent);
+.createProButton:hover:not(:disabled) {
+  background: var(--mt-surface-raised);
 }
 
-.createButton:hover {
+.createButton:not(.createProButton):hover:not(:disabled) {
   background: var(--mt-btn-primary-bg-hover);
   box-shadow: var(--mt-shadow-btn);
+}
+
+.createButton:focus-visible {
+  outline: 2px solid var(--mt-accent);
+  outline-offset: 2px;
 }
 
 .createButton:disabled {
@@ -566,6 +574,10 @@
   .createForm {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .createActions {
+    flex-direction: column;
   }
 
   .input,

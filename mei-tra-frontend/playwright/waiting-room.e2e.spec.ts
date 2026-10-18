@@ -50,7 +50,7 @@ async function login(page: Page, user: typeof PLAYER1) {
 /** Create a room and wait for the host to enter PreGameTable */
 async function createRoom(page: Page, roomName: string) {
   await page.getByPlaceholder('ルーム名を入力').fill(roomName);
-  await page.getByRole('button', { name: 'ルーム作成' }).click();
+  await page.getByRole('button', { name: '通常の部屋を作成' }).click();
 
   await expect(page.locator('[class*="playerPositions"]')).toBeVisible({ timeout: 15_000 });
 }

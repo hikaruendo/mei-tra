@@ -263,6 +263,8 @@
     "proMode": "Pro mode (beta)",
     "proBadge": "Pro",
     "create": "Create room",
+    "createNormal": "Create standard room",
+    "createPro": "Create pro room (beta)",
     "joinable": "Rooms you can join",
     "searchRooms": "Search rooms",
     "searchPlaceholder": "Search by room name",

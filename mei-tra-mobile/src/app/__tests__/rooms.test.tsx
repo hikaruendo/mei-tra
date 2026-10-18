@@ -2,12 +2,20 @@ import { asSeatId } from '@meitra/contracts/ids';
 import type { RoomContract, RoomPlayerContract } from '@meitra/contracts/room';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { TextInput } from 'react-native';
 
 import RoomsScreen from '../rooms';
 
 const mockPush = jest.fn();
-const mockButtons: { label: string; onPress: () => unknown }[] = [];
+const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string }[] = [];
 let mockGame: Record<string, unknown>;
+type RoomsRenderer = {
+  root: {
+    findAllByType: (type: typeof TextInput) => {
+      props: { accessibilityLabel?: string; onChangeText: (value: string) => void };
+    }[];
+  };
+};
 
 jest.mock('expo-router', () => ({
   Redirect: () => null,
@@ -58,11 +66,15 @@ jest.mock('@/components/ui/Button', () => ({
   Button: ({
     children,
     onPress,
+    disabled,
+    variant,
   }: {
     children: string;
     onPress: () => unknown;
+    disabled?: boolean;
+    variant?: string;
   }) => {
-    mockButtons.push({ label: children, onPress });
+    mockButtons.push({ label: children, onPress, disabled, variant });
     return null;
   },
 }));
@@ -112,9 +124,11 @@ const count = (label: string) =>
 
 const render = async () => {
   mockButtons.length = 0;
+  let renderer!: RoomsRenderer;
   await act(async () => {
-    TestRenderer.create(<RoomsScreen />);
+    renderer = TestRenderer.create(<RoomsScreen />) as unknown as RoomsRenderer;
   });
+  return renderer;
 };
 
 describe('RoomsScreen', () => {
@@ -175,5 +189,44 @@ describe('RoomsScreen', () => {
     expect(mockGame.watchRoom).toHaveBeenCalledWith('room-1');
     // The screen moves only once the context reports the room.
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['rooms.createNormal', 'normal', undefined],
+    ['rooms.createPro', 'pro', 'ghost'],
+  ])('creates the selected room type via %s', async (label, mode, variant) => {
+    const renderer = await render();
+    const inputs = renderer.root.findAllByType(TextInput);
+    const roomName = inputs.find((input) => input.props.accessibilityLabel === 'rooms.roomName')!;
+    const points = inputs.find((input) => input.props.accessibilityLabel === 'rooms.pointsToWin')!;
+    act(() => {
+      roomName.props.onChangeText(' Test room ');
+      points.props.onChangeText('20');
+    });
+    const button = mockButtons.filter((candidate) => candidate.label === label).slice(-1)[0];
+    expect(button?.variant).toBe(variant);
+
+    await act(async () => {
+      await button!.onPress();
+    });
+
+    expect(mockGame.createRoom).toHaveBeenCalledWith('Test room', 20, mode);
+  });
+
+  it('disables both create actions while a room is being created', async () => {
+    let complete!: (value: boolean) => void;
+    mockGame.createRoom = jest.fn(() => new Promise<boolean>((resolve) => { complete = resolve; }));
+    await render();
+    const normal = mockButtons.find((button) => button.label === 'rooms.createNormal')!;
+    const pro = mockButtons.find((button) => button.label === 'rooms.createPro')!;
+
+    act(() => {
+      void normal.onPress();
+      void pro.onPress();
+    });
+    expect(mockGame.createRoom).toHaveBeenCalledTimes(1);
+    expect(mockButtons.filter((button) => button.label.startsWith('rooms.create')).slice(-2).every((button) => button.disabled)).toBe(true);
+
+    await act(async () => { complete(true); });
   });
 });
