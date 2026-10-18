@@ -39,3 +39,16 @@ it('retries a failed image without requiring a page reload', () => {
   unmount();
   jest.useRealTimers();
 });
+
+it('recognizes artwork that loaded before hydration attached onLoad', () => {
+  const complete = jest.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(true);
+  const naturalWidth = jest.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(630);
+  try {
+    const { container } = render(<CardFace card="A♠" />);
+    expect(screen.getByRole('img', { name: 'A♠' })).toHaveStyle({ opacity: '1' });
+    expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
+  } finally {
+    complete.mockRestore();
+    naturalWidth.mockRestore();
+  }
+});

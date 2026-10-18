@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CardDesign } from '@meitra/contracts/profile';
 import { DENSHO_ASSET_REVISION, denshoImagePath, resolveDenshoArtId, resolveDenshoStyledArtId } from '@meitra/game-client/card-art';
 import { useCardDesign } from '@/contexts/CardDesignContext';
@@ -35,6 +35,7 @@ function LoadedCardFace({ src, label, card, faceDown, className }: {
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
   const retryTimer = useRef<number | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const red = !faceDown && /[♥♦]/.test(card ?? '');
   const imageSrc = retry === 0 ? src : `${src}${src.includes('?') ? '&' : '?'}retry=${retry}`;
 
@@ -42,7 +43,7 @@ function LoadedCardFace({ src, label, card, faceDown, className }: {
     if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
   }, []);
 
-  const handleError = () => {
+  const handleError = useCallback(() => {
     setLoaded(false);
     if (retry < 2 && retryTimer.current === null) {
       retryTimer.current = window.setTimeout(() => {
@@ -50,15 +51,24 @@ function LoadedCardFace({ src, label, card, faceDown, className }: {
         setRetry(value => value + 1);
       }, 1500 * (retry + 1));
     }
-  };
+  }, [retry]);
 
-  const handleLoad = () => {
+  const handleLoad = useCallback(() => {
     if (retryTimer.current !== null) {
       window.clearTimeout(retryTimer.current);
       retryTimer.current = null;
     }
     setLoaded(true);
-  };
+  }, []);
+
+  // The browser can finish a cached image before React hydrates and attaches
+  // onLoad. Inspect the element too, or the fallback can remain forever.
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image?.complete) return;
+    if (image.naturalWidth > 0) handleLoad();
+    else handleError();
+  }, [imageSrc, handleError, handleLoad]);
 
   return (
     <span className={`${styles.cardFace} ${className ?? ''}`}>
@@ -67,6 +77,7 @@ function LoadedCardFace({ src, label, card, faceDown, className }: {
       </span>}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imageRef}
         className={styles.cardSvg}
         src={imageSrc}
         alt={label}
