@@ -1,14 +1,44 @@
+.cardFace {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: relative;
+  container-type: inline-size;
+  border-radius: inherit;
+  overflow: hidden;
+  background: var(--mt-card-face, #fff);
+  user-select: none;
+  pointer-events: none;
+}
+
 .cardSvg {
   width: 100%;
   height: 100%;
   display: block;
-  // Both SVG scans and image assets follow the surrounding card's corners.
-  border-radius: inherit;
-  overflow: hidden;
   object-fit: cover;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   pointer-events: none;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mt-card-ink, #111);
+  font-size: clamp(9px, 38cqw, 32px);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.red {
+  color: var(--mt-card-red, #c22);
+}
+
+.joker {
+  font-size: clamp(6px, 16cqw, 16px);
 }
