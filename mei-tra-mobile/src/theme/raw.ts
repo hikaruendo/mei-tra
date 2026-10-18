@@ -25,6 +25,7 @@ export const raw = {
   sage: '#a9b7a6',
 
   ink900: '#23281f',
+  ink700: '#33392d',
   ink600: '#4a5142',
 
   cardRed: '#c0362c',

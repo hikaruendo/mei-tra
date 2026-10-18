@@ -15,6 +15,7 @@ type RoomsRenderer = {
     findAllByType: (type: typeof TextInput) => {
       props: { accessibilityLabel?: string; onChangeText: (value: string) => void };
     }[];
+    findAllByProps: (props: Record<string, unknown>) => unknown[];
   };
 };
 
@@ -159,6 +160,13 @@ describe('RoomsScreen', () => {
     expect(mockPush).not.toHaveBeenCalled();
     expect(count('rooms.join')).toBe(2);
     expect(count('rooms.watch')).toBe(2);
+  });
+
+  it('labels the stacked creation and room-list sections', async () => {
+    const renderer = await render();
+
+    expect(renderer.root.findAllByProps({ children: 'rooms.createRoom' }).length).toBeGreaterThan(0);
+    expect(renderer.root.findAllByProps({ children: 'rooms.joinable' }).length).toBeGreaterThan(0);
   });
 
   it('opens the room the server has put the player in', async () => {

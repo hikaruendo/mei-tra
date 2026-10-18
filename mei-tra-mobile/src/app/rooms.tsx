@@ -165,10 +165,13 @@ export default function RoomsScreen() {
           </Button>
         </View>
 
-        <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
+        {connectionStatus !== 'connected' ? (
+          <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
+        ) : null}
 
         <View style={styles.createCard}>
           <Text style={styles.sectionTitle}>{t('rooms.createRoom')}</Text>
+          <Text style={styles.fieldLabel}>{t('rooms.roomName')}</Text>
           <TextInput
             accessibilityLabel={t('rooms.roomName')}
             autoCapitalize="sentences"
@@ -353,8 +356,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   createCard: {
-    gap: 12,
-    padding: 16,
+    gap: 14,
+    padding: 18,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -366,10 +369,24 @@ const styles = StyleSheet.create({
   normalCreateButton: {
     backgroundColor: palette.roomCreation.normalBackground,
     borderColor: palette.roomCreation.normalBorder,
+    minHeight: 56,
+    paddingVertical: 14,
+    shadowColor: palette.roomCreation.proBackground,
+    shadowOpacity: 0.24,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   proCreateButton: {
     backgroundColor: palette.roomCreation.proBackground,
     borderColor: palette.roomCreation.proBorder,
+    minHeight: 56,
+    paddingVertical: 14,
+    shadowColor: palette.roomCreation.proBackground,
+    shadowOpacity: 0.24,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   sectionTitle: {
     color: colors.text,
@@ -385,6 +402,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: 14,
     fontSize: 16,
+  },
+  fieldLabel: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: -6,
   },
   pointsRow: {
     flexDirection: 'row',
@@ -402,6 +425,11 @@ const styles = StyleSheet.create({
   },
   listSection: {
     gap: 12,
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
   },
   roomCard: {
     gap: 10,
@@ -465,9 +493,6 @@ const styles = StyleSheet.create({
     minHeight: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   emptyText: {
     color: colors.textMuted,

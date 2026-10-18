@@ -116,25 +116,30 @@ export const RoomList: React.FC<RoomListProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h2>{t('room.title')}</h2>
+      <section className={`${styles.panel} ${styles.createPanel}`} aria-labelledby="room-create-title">
+        <h2 id="room-create-title" className={styles.sectionTitle}>{t('room.create')}</h2>
         <form onSubmit={(event) => { event.preventDefault(); void handleCreateRoom('normal'); }} className={styles.createForm}>
-          <input
-            type="text"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            placeholder={t('room.roomName')}
-            className={styles.input}
-          />
-          <div className={styles.pointsToWinContainer}>
-            <span className={styles.pointsToWinText}>{t('room.pointsToWin')}</span>
-            <input
-              type="number"
-              min={1}
-              value={pointsToWin}
-              onChange={(e) => setPointsToWin(Number(e.target.value))}
-              className={styles.pointsToWinInput}
-            />
+          <div className={styles.formFields}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>{t('room.roomNameLabel')}</span>
+              <input
+                type="text"
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                placeholder={t('room.roomName')}
+                className={styles.input}
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>{t('room.pointsToWin')}</span>
+              <input
+                type="number"
+                min={1}
+                value={pointsToWin}
+                onChange={(e) => setPointsToWin(Number(e.target.value))}
+                className={styles.pointsToWinInput}
+              />
+            </label>
           </div>
           <div className={styles.createActions}>
             <button
@@ -154,33 +159,30 @@ export const RoomList: React.FC<RoomListProps> = ({
             </button>
           </div>
         </form>
-      </div>
+        {!isLoading && backendStatus.status !== 'ok' && (
+          <div className={`${styles.backendStatus} ${styles[`status-${backendStatus.status}`]}`}>
+            {backendStatus.status === 'degraded' && t('room.backendStatus.degraded')}
+            {backendStatus.status === 'error' && t('room.backendStatus.error')}
+          </div>
+        )}
+        {backendStatus.isStarting && (
+          <div className={styles.startingMessage}>
+            {t('room.backendStatus.starting')}
+          </div>
+        )}
+        {effectiveIsConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
+        {!effectiveIsConnected && !effectiveIsConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
+        {error && <div className={styles.error}>{error}</div>}
+      </section>
 
-      {/* バックエンドステータスの表示 */}
-      {!isLoading && (
-        <div className={`${styles.backendStatus} ${styles[`status-${backendStatus.status}`]}`}>
-          {backendStatus.status === 'ok' && t('room.backendStatus.ok')}
-          {backendStatus.status === 'degraded' && t('room.backendStatus.degraded')}
-          {backendStatus.status === 'error' && t('room.backendStatus.error')}
-        </div>
-      )}
-      {backendStatus.isStarting && (
-        <div className={styles.startingMessage}>
-          {t('room.backendStatus.starting')}
-        </div>
-      )}
-
-      {/* 接続状態の表示 */}
-      {effectiveIsConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
-      {!effectiveIsConnected && !effectiveIsConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
-      {error && <div className={styles.error}>{error}</div>}
-
-      <div className={styles.section}>
+      <section className={`${styles.panel} ${styles.listPanel}`} aria-labelledby="room-list-title">
+        <h2 id="room-list-title" className={styles.sectionTitle}>{t('room.title')}</h2>
         <div className={styles.searchRow}>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label={t('room.search')}
             placeholder={t('room.search')}
             className={styles.searchInput}
           />
@@ -261,7 +263,7 @@ export const RoomList: React.FC<RoomListProps> = ({
             {searchQuery.trim() ? t('room.noSearchResults') : t('room.noRooms')}
           </div>
         )}
-      </div>
+      </section>
 
     </div>
   );

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { RoomList } from '@/components/room/RoomList';
 
@@ -31,6 +31,19 @@ jest.mock('@/hooks/useRoom', () => ({
 
 beforeEach(() => {
   mockCreateRoom.mockReset().mockResolvedValue(true);
+});
+
+it('separates creation from the searchable room list without an online-status banner', () => {
+  render(<RoomList />);
+
+  const createSection = screen.getByRole('region', { name: 'room.create' });
+  const listSection = screen.getByRole('region', { name: 'room.title' });
+  expect(within(createSection).getByRole('textbox', { name: 'room.roomNameLabel' })).toBeInTheDocument();
+  expect(within(createSection).getByRole('spinbutton', { name: 'room.pointsToWin' })).toBeInTheDocument();
+  expect(within(createSection).getByRole('button', { name: 'room.createNormal' })).toBeInTheDocument();
+  expect(within(createSection).getByRole('button', { name: 'room.createPro' })).toBeInTheDocument();
+  expect(within(listSection).getByRole('textbox', { name: 'room.search' })).toBeInTheDocument();
+  expect(screen.queryByText('room.backendStatus.ok')).not.toBeInTheDocument();
 });
 
 it.each([

@@ -37,7 +37,7 @@ export const palette = {
     normalBackground: raw.pale100,
     normalBorder: raw.pale100,
     proBackground: raw.ink900,
-    proBorder: raw.brass500,
+    proBorder: raw.ink700,
   },
 
   border: {

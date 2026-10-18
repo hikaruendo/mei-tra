@@ -225,7 +225,7 @@ $z-index-tooltip: 50;
   --mt-room-pro-bg: var(--mt-raw-ink-900);
   --mt-room-pro-bg-hover: var(--mt-raw-ink-700);
   --mt-room-pro-text: var(--mt-raw-ivory);
-  --mt-room-pro-border: var(--mt-raw-brass-500);
+  --mt-room-pro-border: var(--mt-raw-ink-700);
 
   --mt-danger: #c0362c;
   --mt-success: #6fb98f;
@@ -303,7 +303,7 @@ html[data-theme='light'] {
 
   // Keep the bright button distinct from the pale panel in daylight mode.
   --mt-room-normal-border: var(--mt-raw-ink-900);
-  --mt-room-pro-border: var(--mt-raw-brass-600);
+  --mt-room-pro-border: var(--mt-raw-ink-700);
 
   --mt-danger: #9e2a22;
   --mt-success: #3b7a57;
