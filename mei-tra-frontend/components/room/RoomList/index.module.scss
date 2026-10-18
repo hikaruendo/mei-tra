@@ -90,6 +90,11 @@
 }
 
 .createButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
   padding: 0.8rem 1rem;
   background: var(--mt-room-normal-bg);
   color: var(--mt-room-normal-text);
@@ -108,6 +113,15 @@
   @media (max-width: 640px) {
     width: 100%;
   }
+}
+
+.createButtonDescription {
+  color: inherit;
+  font-size: typography.scale(0.76rem);
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0.78;
+  text-align: center;
 }
 
 .createProButton {

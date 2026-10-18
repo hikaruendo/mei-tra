@@ -42,6 +42,8 @@ it('separates creation from the searchable room list without an online-status ba
   expect(within(createSection).getByRole('spinbutton', { name: 'room.pointsToWin' })).toBeInTheDocument();
   expect(within(createSection).getByRole('button', { name: 'room.createNormal' })).toBeInTheDocument();
   expect(within(createSection).getByRole('button', { name: 'room.createPro' })).toBeInTheDocument();
+  expect(within(createSection).getByText('room.createNormalDescription')).toBeInTheDocument();
+  expect(within(createSection).getByText('room.createProDescription')).toBeInTheDocument();
   expect(within(listSection).getByRole('textbox', { name: 'room.search' })).toBeInTheDocument();
   expect(screen.queryByText('room.backendStatus.ok')).not.toBeInTheDocument();
 });

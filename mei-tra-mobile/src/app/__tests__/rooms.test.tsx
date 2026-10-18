@@ -8,7 +8,7 @@ import RoomsScreen from '../rooms';
 import { palette } from '@/theme/palette';
 
 const mockPush = jest.fn();
-const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string; style?: ViewStyle }[] = [];
+const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string; style?: ViewStyle; description?: string }[] = [];
 let mockGame: Record<string, unknown>;
 type RoomsRenderer = {
   root: {
@@ -71,14 +71,16 @@ jest.mock('@/components/ui/Button', () => ({
     disabled,
     variant,
     style,
+    description,
   }: {
     children: string;
     onPress: () => unknown;
     disabled?: boolean;
     variant?: string;
     style?: ViewStyle;
+    description?: string;
   }) => {
-    mockButtons.push({ label: children, onPress, disabled, variant, style });
+    mockButtons.push({ label: children, onPress, disabled, variant, style, description });
     return null;
   },
 }));
@@ -237,6 +239,8 @@ describe('RoomsScreen', () => {
       backgroundColor: palette.roomCreation.proBackground,
       borderColor: palette.roomCreation.proBorder,
     });
+    expect(normal?.description).toBe('rooms.createNormalDescription');
+    expect(pro?.description).toBe('rooms.createProDescription');
   });
 
   it('disables both create actions while a room is being created', async () => {

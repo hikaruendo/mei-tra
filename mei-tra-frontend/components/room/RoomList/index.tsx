@@ -146,16 +146,26 @@ export const RoomList: React.FC<RoomListProps> = ({
               type="submit"
               className={styles.createButton}
               disabled={disableRoomActions || isCreatingRoom}
+              aria-label={t('room.createNormal')}
+              aria-describedby="room-mode-normal-description"
             >
-              {t('room.createNormal')}
+              <span>{t('room.createNormal')}</span>
+              <span id="room-mode-normal-description" className={styles.createButtonDescription}>
+                {t('room.createNormalDescription')}
+              </span>
             </button>
             <button
               type="button"
               className={`${styles.createButton} ${styles.createProButton}`}
               disabled={disableRoomActions || isCreatingRoom}
               onClick={() => { void handleCreateRoom('pro'); }}
+              aria-label={t('room.createPro')}
+              aria-describedby="room-mode-pro-description"
             >
-              {t('room.createPro')}
+              <span>{t('room.createPro')}</span>
+              <span id="room-mode-pro-description" className={styles.createButtonDescription}>
+                {t('room.createProDescription')}
+              </span>
             </button>
           </div>
         </form>

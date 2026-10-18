@@ -197,6 +197,8 @@ export default function RoomsScreen() {
           </View>
           <View style={styles.createActions}>
             <Button
+              accessibilityHint={t('rooms.createNormalDescription')}
+              description={t('rooms.createNormalDescription')}
               disabled={submitting || connectionStatus !== 'connected'}
               loading={creatingMode === 'normal'}
               onPress={() => { void handleCreate('normal'); }}
@@ -205,6 +207,8 @@ export default function RoomsScreen() {
               {t('rooms.createNormal')}
             </Button>
             <Button
+              accessibilityHint={t('rooms.createProDescription')}
+              description={t('rooms.createProDescription')}
               disabled={submitting || connectionStatus !== 'connected'}
               loading={creatingMode === 'pro'}
               onPress={() => { void handleCreate('pro'); }}
