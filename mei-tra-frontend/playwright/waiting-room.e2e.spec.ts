@@ -110,8 +110,20 @@ test.describe('Waiting Room', () => {
   });
 
   test.afterEach(async () => {
-    await ctx1.close();
-    await ctx2.close();
+    // Closing the browser leaves the authenticated seats reserved for reconnect.
+    // Explicitly leave before reusing these accounts in the next serial test.
+    try {
+      for (const page of [page2, page1]) {
+        const leave = page.getByRole('button', { name: '退出', exact: true });
+        if (await leave.isVisible()) {
+          await leave.click();
+          await expect(leave).toBeHidden({ timeout: 10_000 });
+        }
+      }
+    } finally {
+      await ctx1.close();
+      await ctx2.close();
+    }
   });
 
   // ────────────────────────────────────────────
