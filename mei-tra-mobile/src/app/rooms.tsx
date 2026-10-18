@@ -2,6 +2,7 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -45,6 +46,7 @@ export default function RoomsScreen() {
   const [roomName, setRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState('5');
   const [creatingMode, setCreatingMode] = useState<'normal' | 'pro' | null>(null);
+  const [activeModeTooltip, setActiveModeTooltip] = useState<'normal' | 'pro' | null>(null);
   const creatingRoomRef = useRef(false);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -196,27 +198,57 @@ export default function RoomsScreen() {
             />
           </View>
           <View style={styles.createActions}>
-            <Button
-              accessibilityHint={t('rooms.createNormalDescription')}
-              description={t('rooms.createNormalDescription')}
-              disabled={submitting || connectionStatus !== 'connected'}
-              loading={creatingMode === 'normal'}
-              onPress={() => { void handleCreate('normal'); }}
-              style={styles.normalCreateButton}
-            >
-              {t('rooms.createNormal')}
-            </Button>
-            <Button
-              accessibilityHint={t('rooms.createProDescription')}
-              description={t('rooms.createProDescription')}
-              disabled={submitting || connectionStatus !== 'connected'}
-              loading={creatingMode === 'pro'}
-              onPress={() => { void handleCreate('pro'); }}
-              style={styles.proCreateButton}
-              variant="ghost"
-            >
-              {t('rooms.createPro')}
-            </Button>
+            <View style={[styles.modeAction, activeModeTooltip === 'normal' && styles.activeModeAction]}>
+              <Button
+                accessibilityHint={t('rooms.createNormalDescription')}
+                disabled={submitting || connectionStatus !== 'connected'}
+                loading={creatingMode === 'normal'}
+                onPress={() => { setActiveModeTooltip(null); void handleCreate('normal'); }}
+                style={styles.normalCreateButton}
+              >
+                {t('rooms.createNormal')}
+              </Button>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t('rooms.createNormal')} ${t('rooms.modeInfo')}`}
+                accessibilityState={{ expanded: activeModeTooltip === 'normal' }}
+                onPress={() => setActiveModeTooltip(activeModeTooltip === 'normal' ? null : 'normal')}
+                style={styles.modeInfoButton}
+              >
+                <Text style={styles.normalModeInfoText}>ⓘ</Text>
+              </Pressable>
+              {activeModeTooltip === 'normal' ? (
+                <View pointerEvents="none" style={styles.modeTooltip}>
+                  <Text style={styles.modeTooltipText}>{t('rooms.createNormalDescription')}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={[styles.modeAction, activeModeTooltip === 'pro' && styles.activeModeAction]}>
+              <Button
+                accessibilityHint={t('rooms.createProDescription')}
+                disabled={submitting || connectionStatus !== 'connected'}
+                loading={creatingMode === 'pro'}
+                onPress={() => { setActiveModeTooltip(null); void handleCreate('pro'); }}
+                style={styles.proCreateButton}
+                variant="ghost"
+              >
+                {t('rooms.createPro')}
+              </Button>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t('rooms.createPro')} ${t('rooms.modeInfo')}`}
+                accessibilityState={{ expanded: activeModeTooltip === 'pro' }}
+                onPress={() => setActiveModeTooltip(activeModeTooltip === 'pro' ? null : 'pro')}
+                style={styles.modeInfoButton}
+              >
+                <Text style={styles.proModeInfoText}>ⓘ</Text>
+              </Pressable>
+              {activeModeTooltip === 'pro' ? (
+                <View pointerEvents="none" style={styles.modeTooltip}>
+                  <Text style={styles.modeTooltipText}>{t('rooms.createProDescription')}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
@@ -369,6 +401,53 @@ const styles = StyleSheet.create({
   },
   createActions: {
     gap: 10,
+  },
+  modeAction: {
+    position: 'relative',
+  },
+  activeModeAction: {
+    zIndex: 2,
+  },
+  modeInfoButton: {
+    position: 'absolute',
+    right: 8,
+    top: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  normalModeInfoText: {
+    color: palette.roomCreation.proBackground,
+    fontSize: 21,
+  },
+  proModeInfoText: {
+    color: colors.text,
+    fontSize: 21,
+  },
+  modeTooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    right: 0,
+    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundElevated,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  modeTooltipText: {
+    color: colors.text,
+    fontSize: 16,
+    lineHeight: 23,
+    textAlign: 'center',
   },
   normalCreateButton: {
     backgroundColor: palette.roomCreation.normalBackground,

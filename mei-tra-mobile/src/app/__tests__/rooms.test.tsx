@@ -8,7 +8,7 @@ import RoomsScreen from '../rooms';
 import { palette } from '@/theme/palette';
 
 const mockPush = jest.fn();
-const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string; style?: ViewStyle; description?: string }[] = [];
+const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string; style?: ViewStyle }[] = [];
 let mockGame: Record<string, unknown>;
 type RoomsRenderer = {
   root: {
@@ -71,16 +71,14 @@ jest.mock('@/components/ui/Button', () => ({
     disabled,
     variant,
     style,
-    description,
   }: {
     children: string;
     onPress: () => unknown;
     disabled?: boolean;
     variant?: string;
     style?: ViewStyle;
-    description?: string;
   }) => {
-    mockButtons.push({ label: children, onPress, disabled, variant, style, description });
+    mockButtons.push({ label: children, onPress, disabled, variant, style });
     return null;
   },
 }));
@@ -226,8 +224,8 @@ describe('RoomsScreen', () => {
     expect(mockGame.createRoom).toHaveBeenCalledWith('Test room', 20, mode);
   });
 
-  it('uses distinct bright and dark fills for room creation', async () => {
-    await render();
+  it('uses distinct bright and dark fills and shows descriptions only when tapped', async () => {
+    const renderer = await render();
 
     const normal = mockButtons.find((button) => button.label === 'rooms.createNormal');
     const pro = mockButtons.find((button) => button.label === 'rooms.createPro');
@@ -239,8 +237,11 @@ describe('RoomsScreen', () => {
       backgroundColor: palette.roomCreation.proBackground,
       borderColor: palette.roomCreation.proBorder,
     });
-    expect(normal?.description).toBe('rooms.createNormalDescription');
-    expect(pro?.description).toBe('rooms.createProDescription');
+    expect(renderer.root.findAllByProps({ children: 'rooms.createNormalDescription' })).toHaveLength(0);
+    const info = renderer.root.findAllByProps({ accessibilityLabel: 'rooms.createNormal rooms.modeInfo' })[0] as { props: { onPress: () => void } };
+    act(() => info.props.onPress());
+    expect(renderer.root.findAllByProps({ children: 'rooms.createNormalDescription' }).length).toBeGreaterThan(0);
+    expect(renderer.root.findAllByProps({ children: 'rooms.createProDescription' })).toHaveLength(0);
   });
 
   it('disables both create actions while a room is being created', async () => {

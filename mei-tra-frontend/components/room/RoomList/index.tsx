@@ -65,6 +65,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [activeModeTooltip, setActiveModeTooltip] = useState<'normal' | 'pro' | null>(null);
   const creatingRoomRef = useRef(false);
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
@@ -142,31 +143,53 @@ export const RoomList: React.FC<RoomListProps> = ({
             </label>
           </div>
           <div className={styles.createActions}>
-            <button
-              type="submit"
-              className={styles.createButton}
-              disabled={disableRoomActions || isCreatingRoom}
-              aria-label={t('room.createNormal')}
-              aria-describedby="room-mode-normal-description"
-            >
-              <span>{t('room.createNormal')}</span>
-              <span id="room-mode-normal-description" className={styles.createButtonDescription}>
+            <div className={styles.modeAction} data-tooltip-open={activeModeTooltip === 'normal'}>
+              <button
+                type="submit"
+                className={styles.createButton}
+                disabled={disableRoomActions || isCreatingRoom}
+                aria-describedby="room-mode-normal-description"
+              >
+                {t('room.createNormal')}
+              </button>
+              <button
+                type="button"
+                className={styles.modeInfoButton}
+                aria-label={`${t('room.createNormal')} ${t('room.modeInfo')}`}
+                aria-describedby="room-mode-normal-description"
+                aria-expanded={activeModeTooltip === 'normal'}
+                onClick={() => setActiveModeTooltip(activeModeTooltip === 'normal' ? null : 'normal')}
+              >
+                ⓘ
+              </button>
+              <span id="room-mode-normal-description" role="tooltip" className={styles.modeTooltip}>
                 {t('room.createNormalDescription')}
               </span>
-            </button>
-            <button
-              type="button"
-              className={`${styles.createButton} ${styles.createProButton}`}
-              disabled={disableRoomActions || isCreatingRoom}
-              onClick={() => { void handleCreateRoom('pro'); }}
-              aria-label={t('room.createPro')}
-              aria-describedby="room-mode-pro-description"
-            >
-              <span>{t('room.createPro')}</span>
-              <span id="room-mode-pro-description" className={styles.createButtonDescription}>
+            </div>
+            <div className={styles.modeAction} data-tooltip-open={activeModeTooltip === 'pro'}>
+              <button
+                type="button"
+                className={`${styles.createButton} ${styles.createProButton}`}
+                disabled={disableRoomActions || isCreatingRoom}
+                onClick={() => { void handleCreateRoom('pro'); }}
+                aria-describedby="room-mode-pro-description"
+              >
+                {t('room.createPro')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeInfoButton} ${styles.proModeInfoButton}`}
+                aria-label={`${t('room.createPro')} ${t('room.modeInfo')}`}
+                aria-describedby="room-mode-pro-description"
+                aria-expanded={activeModeTooltip === 'pro'}
+                onClick={() => setActiveModeTooltip(activeModeTooltip === 'pro' ? null : 'pro')}
+              >
+                ⓘ
+              </button>
+              <span id="room-mode-pro-description" role="tooltip" className={styles.modeTooltip}>
                 {t('room.createProDescription')}
               </span>
-            </button>
+            </div>
           </div>
         </form>
         {!isLoading && backendStatus.status !== 'ok' && (

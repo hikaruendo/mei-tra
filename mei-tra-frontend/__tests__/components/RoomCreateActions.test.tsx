@@ -44,6 +44,16 @@ it('separates creation from the searchable room list without an online-status ba
   expect(within(createSection).getByRole('button', { name: 'room.createPro' })).toBeInTheDocument();
   expect(within(createSection).getByText('room.createNormalDescription')).toBeInTheDocument();
   expect(within(createSection).getByText('room.createProDescription')).toBeInTheDocument();
+  expect(within(createSection).getAllByRole('tooltip')).toHaveLength(2);
+  expect(within(within(createSection).getByRole('button', { name: 'room.createNormal' })).queryByText('room.createNormalDescription')).not.toBeInTheDocument();
+  expect(within(within(createSection).getByRole('button', { name: 'room.createPro' })).queryByText('room.createProDescription')).not.toBeInTheDocument();
+  const info = within(createSection).getByRole('button', { name: 'room.createNormal room.modeInfo' });
+  expect(info).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(info);
+  expect(info).toHaveAttribute('aria-expanded', 'true');
+  expect(mockCreateRoom).not.toHaveBeenCalled();
+  fireEvent.click(info);
+  expect(info).toHaveAttribute('aria-expanded', 'false');
   expect(within(listSection).getByRole('textbox', { name: 'room.search' })).toBeInTheDocument();
   expect(screen.queryByText('room.backendStatus.ok')).not.toBeInTheDocument();
 });

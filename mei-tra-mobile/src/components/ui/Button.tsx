@@ -16,7 +16,6 @@ interface ButtonProps
     Omit<PressableProps, 'children' | 'style'> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   loading?: boolean;
-  description?: string;
   style?: ViewStyle;
 }
 
@@ -24,7 +23,6 @@ export function Button({
   children,
   variant = 'primary',
   loading = false,
-  description,
   disabled,
   style,
   ...props
@@ -50,16 +48,9 @@ export function Button({
       {loading ? (
         <ActivityIndicator accessibilityLabel={t('a11y.processing')} color={activityColor} />
       ) : (
-        <>
-          <Text style={[styles.label, variant === 'primary' && styles.primaryLabel]}>
-            {children}
-          </Text>
-          {description ? (
-            <Text style={[styles.description, variant === 'primary' && styles.primaryDescription]}>
-              {description}
-            </Text>
-          ) : null}
-        </>
+        <Text style={[styles.label, variant === 'primary' && styles.primaryLabel]}>
+          {children}
+        </Text>
       )}
     </Pressable>
   );
@@ -104,16 +95,5 @@ const styles = StyleSheet.create({
   },
   primaryLabel: {
     color: colors.cardText,
-  },
-  description: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  primaryDescription: {
-    color: colors.cardText,
-    opacity: 0.76,
   },
 });

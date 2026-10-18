@@ -46,13 +46,4 @@ describe('Button', () => {
     });
   });
 
-  it('shows an optional description below the label', () => {
-    let tree: ReturnType<typeof renderer.create>;
-    renderer.act(() => {
-      tree = renderer.create(<Button description="出せるカードが分かる">簡単モード</Button>);
-    });
-
-    expect(tree!.root.findAllByProps({ children: '簡単モード' }).length).toBeGreaterThan(0);
-    expect(tree!.root.findAllByProps({ children: '出せるカードが分かる' }).length).toBeGreaterThan(0);
-  });
 });
