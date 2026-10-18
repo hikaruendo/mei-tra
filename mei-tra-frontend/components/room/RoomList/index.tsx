@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRoom } from '@/hooks/useRoom';
 import { useBackendStatus } from '@/hooks/useBackendStatus';
@@ -64,7 +64,9 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [newRoomName, setNewRoomName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
-  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [activeModeTooltip, setActiveModeTooltip] = useState<'normal' | 'pro' | null>(null);
+  const creatingRoomRef = useRef(false);
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
   const effectiveIsConnecting = isConnecting ?? roomSocketConnecting;
@@ -91,87 +93,129 @@ export const RoomList: React.FC<RoomListProps> = ({
     onRoomEntered(currentRoom.id);
   }, [currentRoom?.id, onRoomEntered]);
 
-  const handleCreateRoom = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateRoom = async (gameMode: 'normal' | 'pro') => {
+    if (disableRoomActions || creatingRoomRef.current) return;
+    creatingRoomRef.current = true;
+    setIsCreatingRoom(true);
     const hostDisplayName =
       user?.profile?.displayName?.trim() ||
       user?.profile?.username?.trim() ||
       user?.email?.split('@')[0]?.trim() ||
       'Host';
     const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
-    createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
-
-    setNewRoomName('');
-    setPointsToWin(5);
-    setGameMode('normal');
+    try {
+      const created = await createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
+      if (created) {
+        setNewRoomName('');
+        setPointsToWin(5);
+      }
+    } finally {
+      creatingRoomRef.current = false;
+      setIsCreatingRoom(false);
+    }
   };
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h2>{t('room.title')}</h2>
-        <form onSubmit={handleCreateRoom} className={styles.createForm}>
-          <input
-            type="text"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            placeholder={t('room.roomName')}
-            className={styles.input}
-          />
-          <div className={styles.pointsToWinContainer}>
-            <span className={styles.pointsToWinText}>{t('room.pointsToWin')}</span>
-            <input
-              type="number"
-              min={1}
-              value={pointsToWin}
-              onChange={(e) => setPointsToWin(Number(e.target.value))}
-              className={styles.pointsToWinInput}
-            />
+      <section className={`${styles.panel} ${styles.createPanel}`} aria-labelledby="room-create-title">
+        <h2 id="room-create-title" className={styles.sectionTitle}>{t('room.create')}</h2>
+        <form onSubmit={(event) => { event.preventDefault(); void handleCreateRoom('normal'); }} className={styles.createForm}>
+          <div className={styles.formFields}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>{t('room.roomNameLabel')}</span>
+              <input
+                type="text"
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                placeholder={t('room.roomName')}
+                className={styles.input}
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>{t('room.pointsToWin')}</span>
+              <input
+                type="number"
+                min={1}
+                value={pointsToWin}
+                onChange={(e) => setPointsToWin(Number(e.target.value))}
+                className={styles.pointsToWinInput}
+              />
+            </label>
           </div>
-          <label className={styles.proModeLabel}>
-            <input
-              className={styles.proModeCheckbox}
-              type="checkbox"
-              checked={gameMode === 'pro'}
-              onChange={(e) => setGameMode(e.target.checked ? 'pro' : 'normal')}
-            />
-            <span>{t('room.proMode')}</span>
-          </label>
-          <button
-            type="submit"
-            className={styles.createButton}
-            disabled={disableRoomActions}
-          >
-            {t('room.create')}
-          </button>
+          <div className={styles.createActions}>
+            <div className={styles.modeAction} data-tooltip-open={activeModeTooltip === 'normal'}>
+              <button
+                type="submit"
+                className={styles.createButton}
+                disabled={disableRoomActions || isCreatingRoom}
+                aria-describedby="room-mode-normal-description"
+              >
+                {t('room.createNormal')}
+              </button>
+              <button
+                type="button"
+                className={styles.modeInfoButton}
+                aria-label={`${t('room.createNormal')} ${t('room.modeInfo')}`}
+                aria-describedby="room-mode-normal-description"
+                aria-expanded={activeModeTooltip === 'normal'}
+                onClick={() => setActiveModeTooltip(activeModeTooltip === 'normal' ? null : 'normal')}
+              >
+                ⓘ
+              </button>
+              <span id="room-mode-normal-description" role="tooltip" className={styles.modeTooltip}>
+                {t('room.createNormalDescription')}
+              </span>
+            </div>
+            <div className={styles.modeAction} data-tooltip-open={activeModeTooltip === 'pro'}>
+              <button
+                type="button"
+                className={`${styles.createButton} ${styles.createProButton}`}
+                disabled={disableRoomActions || isCreatingRoom}
+                onClick={() => { void handleCreateRoom('pro'); }}
+                aria-describedby="room-mode-pro-description"
+              >
+                {t('room.createPro')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeInfoButton} ${styles.proModeInfoButton}`}
+                aria-label={`${t('room.createPro')} ${t('room.modeInfo')}`}
+                aria-describedby="room-mode-pro-description"
+                aria-expanded={activeModeTooltip === 'pro'}
+                onClick={() => setActiveModeTooltip(activeModeTooltip === 'pro' ? null : 'pro')}
+              >
+                ⓘ
+              </button>
+              <span id="room-mode-pro-description" role="tooltip" className={styles.modeTooltip}>
+                {t('room.createProDescription')}
+              </span>
+            </div>
+          </div>
         </form>
-      </div>
+        {!isLoading && backendStatus.status !== 'ok' && (
+          <div className={`${styles.backendStatus} ${styles[`status-${backendStatus.status}`]}`}>
+            {backendStatus.status === 'degraded' && t('room.backendStatus.degraded')}
+            {backendStatus.status === 'error' && t('room.backendStatus.error')}
+          </div>
+        )}
+        {backendStatus.isStarting && (
+          <div className={styles.startingMessage}>
+            {t('room.backendStatus.starting')}
+          </div>
+        )}
+        {effectiveIsConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
+        {!effectiveIsConnected && !effectiveIsConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
+        {error && <div className={styles.error}>{error}</div>}
+      </section>
 
-      {/* バックエンドステータスの表示 */}
-      {!isLoading && (
-        <div className={`${styles.backendStatus} ${styles[`status-${backendStatus.status}`]}`}>
-          {backendStatus.status === 'ok' && t('room.backendStatus.ok')}
-          {backendStatus.status === 'degraded' && t('room.backendStatus.degraded')}
-          {backendStatus.status === 'error' && t('room.backendStatus.error')}
-        </div>
-      )}
-      {backendStatus.isStarting && (
-        <div className={styles.startingMessage}>
-          {t('room.backendStatus.starting')}
-        </div>
-      )}
-
-      {/* 接続状態の表示 */}
-      {effectiveIsConnecting && <div className={styles.connecting}>{t('room.connecting')}</div>}
-      {!effectiveIsConnected && !effectiveIsConnecting && <div className={styles.error}>{t('room.notConnected')}</div>}
-      {error && <div className={styles.error}>{error}</div>}
-
-      <div className={styles.section}>
+      <section className={`${styles.panel} ${styles.listPanel}`} aria-labelledby="room-list-title">
+        <h2 id="room-list-title" className={styles.sectionTitle}>{t('room.title')}</h2>
         <div className={styles.searchRow}>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label={t('room.search')}
             placeholder={t('room.search')}
             className={styles.searchInput}
           />
@@ -252,7 +296,7 @@ export const RoomList: React.FC<RoomListProps> = ({
             {searchQuery.trim() ? t('room.noSearchResults') : t('room.noRooms')}
           </div>
         )}
-      </div>
+      </section>
 
     </div>
   );

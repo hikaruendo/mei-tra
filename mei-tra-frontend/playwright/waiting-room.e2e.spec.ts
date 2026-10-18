@@ -27,8 +27,9 @@ async function login(page: Page, user: typeof PLAYER1) {
   // Wait for room list to appear — proof of successful login
   await expect(page.getByRole('heading', { name: 'ルーム一覧' })).toBeVisible({ timeout: 20_000 });
 
-  // Wait for the backend HTTP status to show running
-  await expect(page.getByText('サーバー稼働中')).toBeVisible({ timeout: 15_000 });
+  // The healthy-server banner is hidden; the create action becomes enabled
+  // only when the backend is ready and the game socket is connected.
+  await expect(page.getByRole('button', { name: '簡単モード', exact: true })).toBeEnabled({ timeout: 30_000 });
 
   // Wait for WebSocket to actually connect:
   // Phase 1: "ソケット未接続" (isConnected=false, isConnecting=false) must disappear
@@ -50,7 +51,7 @@ async function login(page: Page, user: typeof PLAYER1) {
 /** Create a room and wait for the host to enter PreGameTable */
 async function createRoom(page: Page, roomName: string) {
   await page.getByPlaceholder('ルーム名を入力').fill(roomName);
-  await page.getByRole('button', { name: 'ルーム作成' }).click();
+  await page.getByRole('button', { name: '簡単モード', exact: true }).click();
 
   await expect(page.locator('[class*="playerPositions"]')).toBeVisible({ timeout: 15_000 });
 }
@@ -109,8 +110,20 @@ test.describe('Waiting Room', () => {
   });
 
   test.afterEach(async () => {
-    await ctx1.close();
-    await ctx2.close();
+    // Closing the browser leaves the authenticated seats reserved for reconnect.
+    // Explicitly leave before reusing these accounts in the next serial test.
+    try {
+      for (const page of [page2, page1]) {
+        const leave = page.getByRole('button', { name: '退出', exact: true });
+        if (await leave.isVisible()) {
+          await leave.click();
+          await expect(leave).toBeHidden({ timeout: 10_000 });
+        }
+      }
+    } finally {
+      await ctx1.close();
+      await ctx2.close();
+    }
   });
 
   // ────────────────────────────────────────────

@@ -388,12 +388,12 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   ]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: 'normal' | 'pro' = 'normal') => {
+  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: 'normal' | 'pro' = 'normal'): Promise<boolean> => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
       setError('Room name is required');
-      return;
+      return Promise.resolve(false);
     }
 
     if (!socket?.connected) {
@@ -406,7 +406,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
             : null,
       });
       setError('Socket not connected');
-      return;
+      return Promise.resolve(false);
     }
 
     console.log('[useRoom] Creating room:', {
@@ -421,28 +421,37 @@ export const useRoom = (options: UseRoomOptions = {}) => {
           : null,
     });
 
-    socket.emit(
-      'create-room',
-      { name: trimmedName, pointsToWin, teamAssignmentMethod, gameMode },
-      (response: { success: boolean; room?: RoomContract; error?: string }) => {
-        console.log('[useRoom] create-room ack:', {
-          success: response.success,
-          roomId: response.room?.id ?? null,
-          error: response.error ?? null,
-          socketId: socket.id,
-        });
-        if (response.success && response.room) {
-          const nextRoom = fromRoomContract(response.room);
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('roomId', nextRoom.id);
+    return new Promise((resolve) => {
+      socket.timeout(15_000).emit(
+        'create-room',
+        { name: trimmedName, pointsToWin, teamAssignmentMethod, gameMode },
+        (ackError: Error | null, response?: { success: boolean; room?: RoomContract; error?: string }) => {
+          if (ackError || !response) {
+            setError('Room creation timed out');
+            resolve(false);
+            return;
           }
-          setCurrentRoom(nextRoom);
-          return;
-        }
+          console.log('[useRoom] create-room ack:', {
+            success: response.success,
+            roomId: response.room?.id ?? null,
+            error: response.error ?? null,
+            socketId: socket.id,
+          });
+          if (response.success && response.room) {
+            const nextRoom = fromRoomContract(response.room);
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('roomId', nextRoom.id);
+            }
+            setCurrentRoom(nextRoom);
+            resolve(true);
+            return;
+          }
 
-        setError(response.error || 'Failed to create room');
-      },
-    );
+          setError(response.error || 'Failed to create room');
+          resolve(false);
+        },
+      );
+    });
   }, [socket]);
 
   // ルーム参加
@@ -624,7 +633,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
       currentRoom: null,
       availableRooms: [],
       error: null,
-      createRoom: () => {},
+      createRoom: async () => false,
       joinRoom: () => {},
       watchRoom: () => {},
       leaveRoom: () => {},
