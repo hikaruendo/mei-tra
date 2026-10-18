@@ -27,8 +27,9 @@ async function login(page: Page, user: typeof PLAYER1) {
   // Wait for room list to appear — proof of successful login
   await expect(page.getByRole('heading', { name: 'ルーム一覧' })).toBeVisible({ timeout: 20_000 });
 
-  // Wait for the backend HTTP status to show running
-  await expect(page.getByText('サーバー稼働中')).toBeVisible({ timeout: 15_000 });
+  // The healthy-server banner is hidden; the create action becomes enabled
+  // only when the backend is ready and the game socket is connected.
+  await expect(page.getByRole('button', { name: '簡単モード', exact: true })).toBeEnabled({ timeout: 30_000 });
 
   // Wait for WebSocket to actually connect:
   // Phase 1: "ソケット未接続" (isConnected=false, isConnecting=false) must disappear
@@ -50,7 +51,7 @@ async function login(page: Page, user: typeof PLAYER1) {
 /** Create a room and wait for the host to enter PreGameTable */
 async function createRoom(page: Page, roomName: string) {
   await page.getByPlaceholder('ルーム名を入力').fill(roomName);
-  await page.getByRole('button', { name: '通常の部屋を作成' }).click();
+  await page.getByRole('button', { name: '簡単モード', exact: true }).click();
 
   await expect(page.locator('[class*="playerPositions"]')).toBeVisible({ timeout: 15_000 });
 }
