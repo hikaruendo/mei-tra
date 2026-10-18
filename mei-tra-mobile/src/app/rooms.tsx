@@ -18,6 +18,7 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 import { colors } from '@/theme/colors';
+import { palette } from '@/theme/palette';
 import { t } from '@/i18n';
 import { useLocale } from '@/context/LocaleContext';
 
@@ -196,6 +197,7 @@ export default function RoomsScreen() {
               disabled={submitting || connectionStatus !== 'connected'}
               loading={creatingMode === 'normal'}
               onPress={() => { void handleCreate('normal'); }}
+              style={styles.normalCreateButton}
             >
               {t('rooms.createNormal')}
             </Button>
@@ -203,6 +205,7 @@ export default function RoomsScreen() {
               disabled={submitting || connectionStatus !== 'connected'}
               loading={creatingMode === 'pro'}
               onPress={() => { void handleCreate('pro'); }}
+              style={styles.proCreateButton}
               variant="ghost"
             >
               {t('rooms.createPro')}
@@ -359,6 +362,14 @@ const styles = StyleSheet.create({
   },
   createActions: {
     gap: 10,
+  },
+  normalCreateButton: {
+    backgroundColor: palette.roomCreation.normalBackground,
+    borderColor: palette.roomCreation.normalBorder,
+  },
+  proCreateButton: {
+    backgroundColor: palette.roomCreation.proBackground,
+    borderColor: palette.roomCreation.proBorder,
   },
   sectionTitle: {
     color: colors.text,

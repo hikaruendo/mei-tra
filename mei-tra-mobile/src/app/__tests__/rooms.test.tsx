@@ -2,12 +2,13 @@ import { asSeatId } from '@meitra/contracts/ids';
 import type { RoomContract, RoomPlayerContract } from '@meitra/contracts/room';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { TextInput } from 'react-native';
+import { TextInput, type ViewStyle } from 'react-native';
 
 import RoomsScreen from '../rooms';
+import { palette } from '@/theme/palette';
 
 const mockPush = jest.fn();
-const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string }[] = [];
+const mockButtons: { label: string; onPress: () => unknown; disabled?: boolean; variant?: string; style?: ViewStyle }[] = [];
 let mockGame: Record<string, unknown>;
 type RoomsRenderer = {
   root: {
@@ -68,13 +69,15 @@ jest.mock('@/components/ui/Button', () => ({
     onPress,
     disabled,
     variant,
+    style,
   }: {
     children: string;
     onPress: () => unknown;
     disabled?: boolean;
     variant?: string;
+    style?: ViewStyle;
   }) => {
-    mockButtons.push({ label: children, onPress, disabled, variant });
+    mockButtons.push({ label: children, onPress, disabled, variant, style });
     return null;
   },
 }));
@@ -211,6 +214,21 @@ describe('RoomsScreen', () => {
     });
 
     expect(mockGame.createRoom).toHaveBeenCalledWith('Test room', 20, mode);
+  });
+
+  it('uses distinct bright and dark fills for room creation', async () => {
+    await render();
+
+    const normal = mockButtons.find((button) => button.label === 'rooms.createNormal');
+    const pro = mockButtons.find((button) => button.label === 'rooms.createPro');
+    expect(normal?.style).toMatchObject({
+      backgroundColor: palette.roomCreation.normalBackground,
+      borderColor: palette.roomCreation.normalBorder,
+    });
+    expect(pro?.style).toMatchObject({
+      backgroundColor: palette.roomCreation.proBackground,
+      borderColor: palette.roomCreation.proBorder,
+    });
   });
 
   it('disables both create actions while a room is being created', async () => {

@@ -33,6 +33,13 @@ export const palette = {
     subtle: 'rgba(201, 163, 78, 0.14)',
   },
 
+  roomCreation: {
+    normalBackground: raw.pale100,
+    normalBorder: raw.pale100,
+    proBackground: raw.ink900,
+    proBorder: raw.brass500,
+  },
+
   border: {
     hairline: 'rgba(236, 230, 214, 0.12)',
     focus: raw.brass500,

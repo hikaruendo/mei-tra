@@ -69,9 +69,9 @@
 
 .createButton {
   padding: 0.65rem 1rem;
-  background: var(--mt-btn-primary-bg);
-  color: var(--mt-btn-primary-text);
-  border: none;
+  background: var(--mt-room-normal-bg);
+  color: var(--mt-room-normal-text);
+  border: 1px solid var(--mt-room-normal-border);
   border-radius: var(--mt-radius);
   cursor: pointer;
   font-size: typography.scale(0.95rem);
@@ -87,17 +87,17 @@
 }
 
 .createProButton {
-  background: transparent;
-  color: var(--mt-text-primary);
-  border: 1px solid var(--mt-accent);
+  background: var(--mt-room-pro-bg);
+  color: var(--mt-room-pro-text);
+  border-color: var(--mt-room-pro-border);
 }
 
 .createProButton:hover:not(:disabled) {
-  background: var(--mt-surface-raised);
+  background: var(--mt-room-pro-bg-hover);
 }
 
 .createButton:not(.createProButton):hover:not(:disabled) {
-  background: var(--mt-btn-primary-bg-hover);
+  background: var(--mt-room-normal-bg-hover);
   box-shadow: var(--mt-shadow-btn);
 }
 

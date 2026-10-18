@@ -217,6 +217,16 @@ $z-index-tooltip: 50;
   --mt-btn-primary-bg-hover: linear-gradient(180deg, #e0c784 0%, #c9a34e 100%);
   --mt-btn-primary-text: #12352a;
 
+  // Room creation modes: a bright everyday action and a dark pro action.
+  --mt-room-normal-bg: var(--mt-raw-pale-100);
+  --mt-room-normal-bg-hover: var(--mt-raw-pale-200);
+  --mt-room-normal-text: var(--mt-raw-ink-900);
+  --mt-room-normal-border: var(--mt-raw-pale-100);
+  --mt-room-pro-bg: var(--mt-raw-ink-900);
+  --mt-room-pro-bg-hover: var(--mt-raw-ink-700);
+  --mt-room-pro-text: var(--mt-raw-ivory);
+  --mt-room-pro-border: var(--mt-raw-brass-500);
+
   --mt-danger: #c0362c;
   --mt-success: #6fb98f;
   --mt-warning: #e0c784;
@@ -290,6 +300,10 @@ html[data-theme='light'] {
   --mt-btn-primary-bg: linear-gradient(180deg, #a9863b 0%, #8a6c2e 100%);
   --mt-btn-primary-bg-hover: linear-gradient(180deg, #c9a34e 0%, #a9863b 100%);
   --mt-btn-primary-text: #f4f0e3;
+
+  // Keep the bright button distinct from the pale panel in daylight mode.
+  --mt-room-normal-border: var(--mt-raw-ink-900);
+  --mt-room-pro-border: var(--mt-raw-brass-600);
 
   --mt-danger: #9e2a22;
   --mt-success: #3b7a57;
