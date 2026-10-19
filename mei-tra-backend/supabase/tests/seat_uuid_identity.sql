@@ -514,6 +514,8 @@ select is(
       and data_type <> 'uuid'
   ),
   array[
+    'entitlements.product_id',
+    'entitlements.rc_app_user_id',
     'push_receipts.device_id',
     'push_receipts.expo_receipt_id',
     'push_receipts.worker_id',

@@ -16,6 +16,10 @@
       "types": "./game-history.ts",
       "default": "./game-history.ts"
     },
+    "./monetization": {
+      "types": "./monetization.ts",
+      "default": "./monetization.ts"
+    },
     "./profile": {
       "types": "./profile.ts",
       "default": "./profile.ts"
