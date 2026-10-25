@@ -171,6 +171,7 @@ interface MobileState {
   error: string | null;                 // エラーメッセージ
   notice: string | null;                // 通知メッセージ
   gameResult: GameResultSnapshot | null; // ルーム破棄後も保持する最終結果
+  closedRoomId: string | null;          // server から退出通知が来た部屋（復元失敗も含む）
 }
 ```
 
@@ -217,8 +218,8 @@ interface MobileGameSnapshot {
 | `playerConvertedToCom` | COM 置換 |
 | `error` | エラーメッセージ設定 |
 | `notice` | 通知メッセージ設定 |
-| `gameResult` | ライブ `game-over` から生成した最終結果設定 |
-| `finishRoom` | 最終結果を保持したままルーム状態を破棄 |
+| `gameResult` | ライブ `game-over` または終了スナップショットから生成した最終結果設定 |
+| `finishRoom` | 最終結果と退出させられた部屋 ID を保持したままルーム状態を破棄 |
 | `resetRoom` | ルーム状態リセット |
 
 ### 公開される関数 (via `useGame()`)

@@ -609,6 +609,98 @@ describe('GameProvider realtime resync safety', () => {
     await screen.unmount();
   });
 
+  it('keeps a spectator result from the final snapshot through room teardown', async () => {
+    const screen = await renderProvider();
+    const finalState: GameStatePayload = {
+      ...createGameState(),
+      youSeatId: null,
+      isSpectator: true,
+      gameOver: {
+        winner: 'Team 0',
+        winningTeam: 0,
+        finalScores: {
+          0: { play: 2, total: 5 },
+          1: { play: 1, total: 3 },
+        },
+      },
+    };
+
+    await act(async () => {
+      mockSocket.trigger('game-state', finalState);
+      await flushPromises();
+    });
+    expect(screen.latestGame.gameResult).toMatchObject({
+      winningTeam: 0,
+      viewerRole: 'spectator',
+    });
+    const resultToken = screen.latestGame.gameResult?.token;
+
+    await act(async () => {
+      mockSocket.trigger('game-state', finalState);
+      mockSocket.trigger('back-to-lobby');
+      await flushPromises();
+    });
+    expect(screen.latestGame.game).toBeNull();
+    expect(screen.latestGame.gameResult?.token).toBe(resultToken);
+    expect(screen.latestGame.closedRoomId).toBe('room-1');
+    await screen.unmount();
+  });
+
+  it('preserves the final snapshot result when back-to-lobby arrives before a render', async () => {
+    const screen = await renderProvider();
+    const finalState: GameStatePayload = {
+      ...createGameState(),
+      youSeatId: null,
+      isSpectator: true,
+      gameOver: {
+        winner: 'Team 1',
+        winningTeam: 1,
+        finalScores: {
+          0: { play: 0, total: 2 },
+          1: { play: 5, total: 5 },
+        },
+      },
+    };
+
+    await act(async () => {
+      mockSocket.trigger('game-state', finalState);
+      mockSocket.trigger('back-to-lobby');
+      await flushPromises();
+    });
+
+    expect(screen.latestGame.game).toBeNull();
+    expect(screen.latestGame.gameResult).toMatchObject({
+      winningTeam: 1,
+      viewerRole: 'spectator',
+    });
+    expect(screen.latestGame.closedRoomId).toBe('room-1');
+    await screen.unmount();
+  });
+
+  it('remembers a server-rejected room restore before a room snapshot arrives', async () => {
+    const screen = await renderProvider();
+
+    await act(async () => {
+      mockSocket.trigger('connect');
+      await flushPromises();
+    });
+    await act(async () => {
+      void screen.latestGame.resumeRoom('room-notification');
+      await flushPromises();
+    });
+    expect(screen.latestGame.currentRoom).toBeNull();
+    expect(screen.latestGame.game).toBeNull();
+    expect(screen.latestGame.connectionStatus).toBe('resyncing');
+
+    await act(async () => {
+      mockSocket.trigger('back-to-lobby');
+      await flushPromises();
+    });
+    expect(screen.latestGame.closedRoomId).toBe('room-notification');
+    expect(screen.latestGame.connectionStatus).toBe('connected');
+    await screen.unmount();
+  });
+
   it('does not create or sound a result from a reconnect snapshot', async () => {
     const screen = await renderProvider();
     await act(async () => {

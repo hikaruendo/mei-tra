@@ -1,5 +1,5 @@
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { GameBoard } from "@/components/game/GameBoard";
@@ -36,6 +36,7 @@ export default function RoomScreen() {
     recoveryNotice,
     refreshRooms,
     gameResult,
+    closedRoomId,
     shuffleTeams,
     startGame,
     confirmRoundResults,
@@ -70,6 +71,15 @@ export default function RoomScreen() {
   );
   const historyRoomId = game?.roomId ?? currentRoom?.id ?? null;
   const history = useGameHistory(historyRoomId, gameStarted);
+  const resolvedRoomId =
+    roomId === "current" ? (currentRoom?.id ?? game?.roomId) : roomId;
+  const roomMatches = Boolean(resolvedRoomId && currentRoom?.id === resolvedRoomId);
+  const gameMatches = Boolean(resolvedRoomId && game?.roomId === resolvedRoomId);
+  const wasInRoomRef = useRef(false);
+
+  useEffect(() => {
+    if (roomMatches || gameMatches) wasInRoomRef.current = true;
+  }, [roomMatches, gameMatches]);
 
   const doLeave = useCallback(async () => {
     const didLeave = await leaveRoom();
@@ -94,10 +104,20 @@ export default function RoomScreen() {
     );
   }
 
-  const resolvedRoomId =
-    roomId === "current" ? (currentRoom?.id ?? game?.roomId) : roomId;
-  const roomMatches = currentRoom?.id === resolvedRoomId;
-  const gameMatches = game?.roomId === resolvedRoomId;
+  // The server closes finished rooms (including spectator subscriptions).
+  // Keep the result overlay if present, but leave this route once its room is
+  // gone; otherwise the spectator sees "restoring" forever.
+  const serverClosedThisRoom = Boolean(
+    closedRoomId && (roomId === "current" || closedRoomId === roomId),
+  );
+  if (
+    (wasInRoomRef.current || serverClosedThisRoom) &&
+    !roomMatches &&
+    !gameMatches &&
+    !gameResult
+  ) {
+    return <Redirect href="/rooms" />;
+  }
 
   if (!roomMatches && !gameMatches && !gameResult) {
     return (

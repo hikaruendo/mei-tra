@@ -7,6 +7,7 @@ import type {
   TrumpType,
   ChomboViolationType,
   DevChomboScenarioType,
+  GameOverPayload,
 } from '@meitra/contracts/game';
 import type {
   AckableClientEvent,
@@ -105,6 +106,13 @@ export type NoticeMessage =
       severity?: NoticeSeverity;
     };
 
+const gameOverKey = (roomId: string, payload: GameOverPayload): string | null => {
+  const winningTeam = resolveWinningTeam(payload);
+  return winningTeam === null
+    ? null
+    : `${roomId}-${winningTeam}-${payload.finalScores[0]?.total}-${payload.finalScores[1]?.total}`;
+};
+
 interface MobileState {
   rooms: MobileRoom[];
   currentRoom: MobileRoom | null;
@@ -115,6 +123,8 @@ interface MobileState {
   notice: NoticeMessage | null;
   recoveryNotice: FeedbackMessage | null;
   gameResult: GameResultSnapshot | null;
+  /** Room the server last dismissed, including a failed restore before it appeared. */
+  closedRoomId: string | null;
   /**
    * Set only by the live 'game-started' event; snapshot restores clear it so a
    * reconnect never replays the reveal.
@@ -149,7 +159,7 @@ type Action =
   | { type: 'dealAnimationCue'; cue: DealAnimationCue | null }
   | { type: 'pendingHandCard'; card: string | null }
   | { type: 'resetRoom' }
-  | { type: 'finishRoom' };
+  | { type: 'finishRoom'; roomId?: string | null };
 
 type CurrentPlayerAckEvent = Extract<
   AckableClientEvent,
@@ -171,6 +181,7 @@ const initialState: MobileState = {
   notice: null,
   recoveryNotice: null,
   gameResult: null,
+  closedRoomId: null,
   firstTurnReveal: null,
   dealAnimationCue: null,
   pendingHandCard: null,
@@ -208,6 +219,7 @@ function reducer(state: MobileState, action: Action): MobileState {
       return {
         ...state,
         currentRoom: room,
+        closedRoomId: room ? null : state.closedRoomId,
         rooms: room
           ? [
               ...state.rooms.filter((item) => item.id !== room.id),
@@ -225,7 +237,8 @@ function reducer(state: MobileState, action: Action): MobileState {
         game,
         pendingGamePatches: null,
         error: null,
-        gameResult: null,
+        gameResult: game.gameOver ? state.gameResult : null,
+        closedRoomId: null,
         pendingHandCard: settlePendingHandCard(state.pendingHandCard, game),
       };
     }
@@ -370,6 +383,7 @@ function reducer(state: MobileState, action: Action): MobileState {
         notice: null,
         recoveryNotice: null,
         gameResult: null,
+        closedRoomId: null,
         firstTurnReveal: null,
         dealAnimationCue: null,
         pendingHandCard: null,
@@ -377,6 +391,8 @@ function reducer(state: MobileState, action: Action): MobileState {
     case 'finishRoom':
       return {
         ...state,
+        closedRoomId:
+          state.game?.roomId ?? state.currentRoom?.id ?? action.roomId ?? null,
         currentRoom: null,
         game: null,
         pendingGamePatches: null,
@@ -843,20 +859,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       pendingNegriCardRef.current = null;
       gameEventStateRef.current = createGameEventStateFromSnapshot(payload);
       const snapshot = normalizeGameStatePayload(payload);
-      if (payload.gameOver) {
-        gameResultTokenRef.current += 1;
-        dispatch({
-          type: 'gameResult',
-          result: buildGameResultSnapshot({
-            payload: payload.gameOver,
-            players: snapshot.players,
-            viewerSeatId: snapshot.youSeatId,
-            isSpectator: snapshot.isSpectator,
-            teamNames: snapshot.teamNames,
-            token: gameResultTokenRef.current,
-          }),
-        });
-      }
       dispatch({
         type: 'game',
         // The bootstrap snapshot right after game start already carries the
@@ -865,6 +867,24 @@ export function GameProvider({ children }: PropsWithChildren) {
           ? { ...snapshot, currentTurnSeatId: null }
           : snapshot,
       });
+      if (payload.gameOver) {
+        const key = gameOverKey(payload.roomId, payload.gameOver);
+        if (key && gameOverKeyRef.current !== key) {
+          gameResultTokenRef.current += 1;
+          const result = buildGameResultSnapshot({
+            payload: payload.gameOver,
+            players: snapshot.players,
+            viewerSeatId: snapshot.youSeatId,
+            isSpectator: snapshot.isSpectator,
+            teamNames: snapshot.teamNames,
+            token: gameResultTokenRef.current,
+          });
+          if (result) {
+            gameOverKeyRef.current = key;
+            dispatch({ type: 'gameResult', result });
+          }
+        }
+      }
       void roomStorage.set(payload.roomId);
       finishResyncFlight(payload.roomId);
     });
@@ -1011,9 +1031,8 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('game-over', (payload) => {
       pendingNegriCardRef.current = null;
       const game = stateRef.current.game;
-      const winningTeam = resolveWinningTeam(payload);
-      const key = `${winningTeam}-${payload.finalScores[0]?.total}-${payload.finalScores[1]?.total}`;
-      if (!game || winningTeam === null || gameOverKeyRef.current === key) return;
+      const key = game ? gameOverKey(game.roomId, payload) : null;
+      if (!game || !key || gameOverKeyRef.current === key) return;
       gameOverKeyRef.current = key;
       gameResultTokenRef.current += 1;
       const result = buildGameResultSnapshot({
@@ -1089,7 +1108,12 @@ export function GameProvider({ children }: PropsWithChildren) {
     socket.on('back-to-lobby', (payload) => {
       pendingNegriCardRef.current = null;
       void roomStorage.clear();
-      dispatch({ type: stateRef.current.gameResult ? 'finishRoom' : 'resetRoom' });
+      dispatch({
+        type: 'finishRoom',
+        roomId:
+          resyncFlightRef.current?.targetRoomId ??
+          resyncFlightRef.current?.requestedRoomId,
+      });
       finishResyncFlight(undefined);
       if (payload?.code) {
         dispatch({
