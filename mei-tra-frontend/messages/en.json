@@ -1112,6 +1112,20 @@
       "p1": "The operator may amend these Terms as necessary. Amended Terms take effect upon posting on the Service. Use of the Service after amendment constitutes acceptance of the amended Terms."
     }
   },
+  "accountDeletion": {
+    "title": "Delete your Meitra account",
+    "backToTop": "Back to top",
+    "requestTitle": "Request deletion",
+    "requestDescription": "You can request deletion of your Meitra account and associated data even after uninstalling the app.",
+    "requestInstructions": "Email {email} from the address registered with Meitra with the subject “Delete my Meitra account.” If you use another address, include your registered email address. We may verify your identity before processing the request.",
+    "requestButton": "Request deletion by email",
+    "emailSubject": "Delete my Meitra account",
+    "securityNote": "Do not send your password or verification codes.",
+    "dataTitle": "Data affected",
+    "dataDescription": "We delete your account, profile, and avatar image. Match records may remain with identifying information removed so other players' records remain intact.",
+    "inAppTitle": "Delete in the app",
+    "inAppDescription": "If you still have the Meitra app, open Settings, then Account, and choose Delete account."
+  },
   "privacy": {
     "title": "Privacy Policy",
     "updated": "Last updated: September 2026",
@@ -1141,7 +1155,8 @@
     },
     "section5": {
       "title": "5. Data Retention and Deletion",
-      "p1": "When an account is deleted or after a period of inactivity, we may delete associated data. Deleted data cannot be recovered."
+      "p1": "When an account is deleted or after a period of inactivity, we may delete associated data. Deleted data cannot be recovered.",
+      "accountDeletionLink": "Request deletion of your account and associated data"
     },
     "section6": {
       "title": "6. Contact",

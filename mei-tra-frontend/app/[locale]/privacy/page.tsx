@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 import { LegalPage, LegalSection } from '@/components/legal/LegalPage';
 
 export default function PrivacyPage() {
@@ -35,6 +36,9 @@ export default function PrivacyPage() {
 
       <LegalSection title={t('section5.title')}>
         <p>{t('section5.p1')}</p>
+        <p>
+          <Link href="/account-deletion">{t('section5.accountDeletionLink')}</Link>
+        </p>
       </LegalSection>
 
       <LegalSection title={t('section6.title')}>

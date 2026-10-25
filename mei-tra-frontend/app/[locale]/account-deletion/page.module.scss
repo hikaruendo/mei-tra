@@ -1,0 +1,18 @@
+.requestButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--mt-accent);
+  color: var(--mt-surface-felt);
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
