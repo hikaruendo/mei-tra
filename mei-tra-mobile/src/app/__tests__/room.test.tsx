@@ -5,13 +5,14 @@ import { Text } from 'react-native';
 import RoomScreen from '../room/[roomId]';
 
 let mockGame: Record<string, unknown>;
+let mockRouteRoomId = 'current';
 
 jest.mock('expo-router', () => ({
   Redirect: ({ href }: { href: string }) => {
     const { Text } = jest.requireActual('react-native');
     return <Text>{`redirect:${href}`}</Text>;
   },
-  useLocalSearchParams: () => ({ roomId: 'current' }),
+  useLocalSearchParams: () => ({ roomId: mockRouteRoomId }),
   useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
 }));
 
@@ -60,12 +61,14 @@ const labels = (renderer: Renderer) =>
 
 describe('RoomScreen after a finished spectator game', () => {
   beforeEach(() => {
+    mockRouteRoomId = 'current';
     mockGame = {
       currentRoom: null,
       game: { roomId: 'room-1', gamePhase: 'play', isSpectator: true },
       connectionStatus: 'connected',
       currentSeatId: null,
       gameResult: null,
+      closedRoomId: null,
       error: null,
       notice: null,
       recoveryNotice: null,
@@ -105,6 +108,29 @@ describe('RoomScreen after a finished spectator game', () => {
 
   it('still waits while an initial room restoration has not completed', async () => {
     mockGame = { ...mockGame, game: null };
+    let renderer!: Renderer;
+    await act(async () => {
+      renderer = TestRenderer.create(<RoomScreen />) as unknown as Renderer;
+    });
+
+    expect(labels(renderer)).not.toContain('redirect:/rooms');
+    expect(labels(renderer)).toContain('room.restoring');
+  });
+
+  it('returns to rooms if the server dismissed a restore before the room appeared', async () => {
+    mockRouteRoomId = 'room-1';
+    mockGame = { ...mockGame, game: null, closedRoomId: 'room-1' };
+    let renderer!: Renderer;
+    await act(async () => {
+      renderer = TestRenderer.create(<RoomScreen />) as unknown as Renderer;
+    });
+
+    expect(labels(renderer)).toContain('redirect:/rooms');
+  });
+
+  it('does not dismiss another room because of a previous room closure', async () => {
+    mockRouteRoomId = 'room-2';
+    mockGame = { ...mockGame, game: null, closedRoomId: 'room-1' };
     let renderer!: Renderer;
     await act(async () => {
       renderer = TestRenderer.create(<RoomScreen />) as unknown as Renderer;

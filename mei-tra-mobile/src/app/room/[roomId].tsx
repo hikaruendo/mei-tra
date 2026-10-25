@@ -36,6 +36,7 @@ export default function RoomScreen() {
     recoveryNotice,
     refreshRooms,
     gameResult,
+    closedRoomId,
     shuffleTeams,
     startGame,
     confirmRoundResults,
@@ -106,7 +107,15 @@ export default function RoomScreen() {
   // The server closes finished rooms (including spectator subscriptions).
   // Keep the result overlay if present, but leave this route once its room is
   // gone; otherwise the spectator sees "restoring" forever.
-  if (wasInRoomRef.current && !roomMatches && !gameMatches && !gameResult) {
+  const serverClosedThisRoom = Boolean(
+    closedRoomId && (roomId === "current" || closedRoomId === roomId),
+  );
+  if (
+    (wasInRoomRef.current || serverClosedThisRoom) &&
+    !roomMatches &&
+    !gameMatches &&
+    !gameResult
+  ) {
     return <Redirect href="/rooms" />;
   }
 
