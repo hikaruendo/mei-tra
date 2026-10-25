@@ -8,7 +8,7 @@ import styles from './LegalPage.module.scss';
 
 interface LegalPageProps {
   title: string;
-  updated: string;
+  updated?: string;
   backLabel: string;
   children: ReactNode;
 }
@@ -21,7 +21,7 @@ export function LegalPage({ title, updated, backLabel, children }: LegalPageProp
         <main className={styles.main}>
           <header className={styles.header}>
             <h1>{title}</h1>
-            <p className={styles.updated}>{updated}</p>
+            {updated && <p className={styles.updated}>{updated}</p>}
           </header>
 
           <article className={styles.content}>{children}</article>
