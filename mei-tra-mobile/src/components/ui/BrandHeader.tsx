@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
+import { t } from '@/i18n';
 
 interface BrandHeaderProps {
   subtitle?: string;
@@ -17,7 +18,7 @@ export function BrandHeader({ subtitle }: BrandHeaderProps) {
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />
-        <Text style={styles.logo}>Meitra</Text>
+        <Text style={styles.logo}>{t('common.appName')}</Text>
       </View>
       {subtitle ? (
         <Text numberOfLines={2} style={styles.subtitle}>
@@ -36,9 +37,9 @@ const styles = StyleSheet.create({
   mark: { width: 44, height: 44, borderRadius: 8 },
   logo: {
     color: colors.gold,
-    fontSize: 34,
+    fontSize: 27,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    flexShrink: 1,
   },
   subtitle: {
     color: colors.textMuted,

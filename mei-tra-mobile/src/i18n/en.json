@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Meitra Online",
     "cancel": "Cancel",
     "unknown": "Unknown",
     "player": "Player"
@@ -294,9 +295,9 @@
   },
   "rules": {
     "title": "Rules",
-    "intro": "Review how to play Meitra and the rules to remember during a game.",
+    "intro": "Review how to play Meitra Online and the rules to remember during a game.",
     "overviewTitle": "Overview",
-    "overviewBody": "Meitra is a four-player, two-team trick-taking game. Deal the cards, choose a trump through bidding, then play 10 tricks to compete for points.",
+    "overviewBody": "Meitra Online is a four-player, two-team trick-taking game. Deal the cards, choose a trump through bidding, then play 10 tricks to compete for points.",
     "cardsTitle": "Cards",
     "cardsBody": "The deck uses 5, 6, 7, 8, 9, 10, Q, K, A and the JOKER. Normal strength runs A, K, Q, 10, 9, 8, 7, 6, 5, while the JOKER is the strongest card.",
     "bidTitle": "Bid",

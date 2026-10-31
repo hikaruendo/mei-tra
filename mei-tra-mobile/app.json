@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Meitra",
+    "name": "Meitra Online",
     "slug": "meitra",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "icon": "./assets/images/meitra-icon.png",
     "orientation": "portrait",
     "scheme": "meitra",
@@ -14,8 +14,12 @@
       "icon": "./assets/images/meitra-icon.png",
       "bundleIdentifier": "com.kando1.meitra",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true
       }
+    },
+    "locales": {
+      "ja": "./locales/ja.json"
     },
     "android": {
       "package": "com.kando1.meitra",
@@ -45,14 +49,19 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Meitra uploads the photo you select to your profile and displays it as your avatar to other players, so they can recognize you during a game."
+          "photosPermission": "Meitra Online uploads the photo you select to your profile and displays it as your avatar to other players, so they can recognize you during a game."
         }
       ],
       "expo-secure-store",
       "expo-notifications",
       "expo-web-browser",
       "expo-apple-authentication",
-      "expo-localization"
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["en", "ja"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
