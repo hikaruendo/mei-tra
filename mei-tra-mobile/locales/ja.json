@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "明トラ Online",
+    "NSPhotoLibraryUsageDescription": "選んだ写真をプロフィール画像としてアップロードし、対局相手に表示します。"
+  },
+  "android": {
+    "app_name": "明トラ Online"
+  }
+}
