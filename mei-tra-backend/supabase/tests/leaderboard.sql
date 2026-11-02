@@ -97,4 +97,68 @@ begin
 end
 $test$;
 
+-- Exercise the real game-state write path, including rollback on ranking errors.
+do $trigger_test$
+declare
+  players uuid[] := array[gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid()];
+  test_room_id uuid := gen_random_uuid();
+  test_match_id uuid := gen_random_uuid();
+  test_failed_match_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, aud, role, is_anonymous)
+  select id, 'authenticated', 'authenticated', false from unnest(players) as id;
+  insert into public.rooms (id, name, status, settings)
+  values (test_room_id, 'Leaderboard trigger test', 'playing', '{"gameMode":"pro"}');
+  insert into public.room_players (room_id, name, user_id, team, seat_index)
+  select test_room_id, 'Player ' || n, players[n], (n - 1) % 2, n - 1
+  from generate_series(1, 4) as n;
+  insert into public.game_states (room_id, state_data)
+  values (test_room_id, jsonb_build_object('rankingMatchId', test_match_id,
+    'rankingComParticipated', false, 'gameOver', null));
+
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":0}')
+  where game_states.room_id = test_room_id;
+  if (select count(*) from public.ranking_results where ranking_results.match_id = test_match_id) <> 4 then
+    raise exception 'Game-over save did not atomically capture four results';
+  end if;
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":0}')
+  where game_states.room_id = test_room_id;
+  if (select count(*) from public.ranking_results where ranking_results.match_id = test_match_id) <> 4 then
+    raise exception 'Repeated game-over save counted twice';
+  end if;
+
+  update public.game_states
+  set state_data = jsonb_build_object('rankingMatchId', test_failed_match_id,
+    'rankingComParticipated', true, 'gameOver', null)
+  where game_states.room_id = test_room_id;
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":0}')
+  where game_states.room_id = test_room_id;
+  if exists (select 1 from public.ranking_results where ranking_results.match_id = test_failed_match_id) then
+    raise exception 'A match with past COM participation was counted';
+  end if;
+
+  update public.rooms set settings = '{"gameMode":"invalid"}' where id = test_room_id;
+  update public.game_states
+  set state_data = jsonb_build_object('rankingMatchId', test_failed_match_id,
+    'rankingComParticipated', false, 'gameOver', null)
+  where game_states.room_id = test_room_id;
+  begin
+    update public.game_states
+    set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":0}')
+    where game_states.room_id = test_room_id;
+    raise exception 'Expected the ranking write to fail';
+  exception when others then
+    if sqlerrm = 'Expected the ranking write to fail' then raise; end if;
+  end;
+  if (select state_data->'gameOver' from public.game_states where game_states.room_id = test_room_id) <> 'null'::jsonb
+    or exists (select 1 from public.ranking_results where ranking_results.match_id = test_failed_match_id)
+  then
+    raise exception 'Failed ranking write committed a game-over snapshot';
+  end if;
+end
+$trigger_test$;
+
 rollback;

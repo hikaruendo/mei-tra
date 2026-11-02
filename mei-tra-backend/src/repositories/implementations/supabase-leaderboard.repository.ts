@@ -4,37 +4,11 @@ import type {
   LeaderboardResponse,
 } from '@contracts/leaderboard';
 import { SupabaseService } from '../../database/supabase.service';
-import { toJson } from '../../database/json-value';
-import {
-  ILeaderboardRepository,
-  RankedPlayerResult,
-} from '../interfaces/leaderboard.repository.interface';
+import { ILeaderboardRepository } from '../interfaces/leaderboard.repository.interface';
 
 @Injectable()
 export class SupabaseLeaderboardRepository implements ILeaderboardRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
-
-  async record(
-    matchId: string,
-    mode: LeaderboardMode,
-    players: RankedPlayerResult[],
-  ): Promise<void> {
-    const { error } = await this.supabaseService.client.rpc(
-      'record_ranked_match',
-      {
-        p_match_id: matchId,
-        p_mode: mode,
-        p_players: toJson(
-          players.map((player) => ({
-            user_id: player.userId,
-            won: player.won,
-          })),
-        ),
-      },
-    );
-    if (error)
-      throw new Error(`Failed to record ranked match: ${error.message}`);
-  }
 
   async get(
     mode: LeaderboardMode,

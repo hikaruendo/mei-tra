@@ -256,7 +256,7 @@ describe('RoomsScreen', () => {
       void pro.onPress();
     });
     expect(mockGame.createRoom).toHaveBeenCalledTimes(1);
-    expect(mockButtons.filter((button) => button.label.startsWith('rooms.create')).slice(-2).every((button) => button.disabled)).toBe(true);
+    expect(mockButtons.filter((button) => typeof button.label === 'string' && button.label.startsWith('rooms.create')).slice(-2).every((button) => button.disabled)).toBe(true);
 
     await act(async () => { complete(true); });
   });

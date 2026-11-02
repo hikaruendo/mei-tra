@@ -44,6 +44,56 @@ begin
 end;
 $$;
 
+-- The game-over snapshot and its ranking result commit together. A failed
+-- ranking write cannot silently leave an unranked finished match behind.
+create or replace function meitra_private.capture_ranked_match_at_game_over()
+returns trigger
+language plpgsql security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  match_id uuid;
+  winning_team integer;
+  match_mode text;
+  players jsonb;
+  player_count integer;
+  distinct_user_count integer;
+  all_human boolean;
+begin
+  if new.state_data->'gameOver' is null
+    or new.state_data->'gameOver' = 'null'::jsonb
+    or old.state_data->'gameOver' is not distinct from new.state_data->'gameOver'
+    or new.state_data->>'rankingMatchId' is null
+    or coalesce((new.state_data->>'rankingComParticipated')::boolean, false)
+  then
+    return new;
+  end if;
+
+  match_id := (new.state_data->>'rankingMatchId')::uuid;
+  winning_team := (new.state_data #>> '{gameOver,winningTeam}')::integer;
+  select coalesce(r.settings->>'gameMode', 'normal') into match_mode
+  from public.rooms r where r.id = new.room_id;
+
+  select count(*), count(distinct rp.user_id),
+         bool_and(not rp.is_com and rp.user_id is not null and rp.team in (0, 1)),
+         jsonb_agg(jsonb_build_object('user_id', rp.user_id,
+           'won', rp.team = winning_team) order by rp.seat_index)
+    into player_count, distinct_user_count, all_human, players
+  from public.room_players rp where rp.room_id = new.room_id;
+
+  if winning_team in (0, 1) and player_count = 4
+    and distinct_user_count = 4 and all_human
+  then
+    perform public.record_ranked_match(match_id, match_mode, players);
+  end if;
+  return new;
+end;
+$$;
+
+create trigger capture_ranked_match_at_game_over
+after update of state_data on public.game_states
+for each row execute function meitra_private.capture_ranked_match_at_game_over();
+
 create or replace function public.get_win_rate_leaderboard(
   p_mode text,
   p_viewer_id uuid

@@ -14,7 +14,6 @@ import { RevealBrokenHandUseCase } from '../reveal-broken-hand.use-case';
 import { CompleteFieldUseCase } from '../complete-field.use-case';
 import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
 import { ProcessGameOverUseCase } from '../process-game-over.use-case';
-import { ILeaderboardRepository } from '../../repositories/interfaces/leaderboard.repository.interface';
 import { UpdateAuthUseCase } from '../update-auth.use-case';
 import { AuthService } from '../../auth/auth.service';
 import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
@@ -4662,54 +4661,6 @@ describe('Game Use Cases', () => {
     afterEach(() => {
       jest.useRealTimers();
       jest.clearAllMocks();
-    });
-
-    it('records a completed human match once with its mode and winner', async () => {
-      const roomService = createRoomServiceMock();
-      const leaderboard = {
-        record: jest.fn().mockResolvedValue(undefined),
-        get: jest.fn(),
-      } as unknown as jest.Mocked<ILeaderboardRepository>;
-      const room = {
-        ...baseRoom,
-        settings: { ...baseRoom.settings, gameMode: 'pro' as const },
-        players: [0, 1, 2, 3].map((index) => ({
-          ...basePlayers[index % 2],
-          seatId: asSeatId(`player-${index}`),
-          userId: `user-${index}`,
-          team: (index % 2) as 0 | 1,
-          isCOM: false,
-        })),
-      } as Room;
-      roomService.getRoom.mockResolvedValue(room);
-      roomService.getRoomGameState.mockResolvedValue({
-        getState: jest.fn().mockReturnValue({
-          rankingMatchId: 'match-1',
-          rankingComParticipated: false,
-        }),
-        findSessionUserBySeatId: jest.fn().mockReturnValue(null),
-      } as unknown as GameStateService);
-
-      await new ProcessGameOverUseCase(
-        roomService,
-        undefined,
-        leaderboard,
-      ).execute({
-        roomId: room.id,
-        winningTeam: 0,
-        teamScores: {
-          0: { play: 5, total: 20 },
-          1: { play: 2, total: 10 },
-        } as TeamScores,
-        resetDelayMs: 0,
-      });
-
-      expect(leaderboard.record).toHaveBeenCalledWith('match-1', 'pro', [
-        { userId: 'user-0', won: true },
-        { userId: 'user-1', won: false },
-        { userId: 'user-2', won: true },
-        { userId: 'user-3', won: false },
-      ]);
     });
 
     it('updates authenticated player stats only for authenticated players', async () => {
