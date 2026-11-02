@@ -488,6 +488,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      ranking_results: {
+        Row: {
+          completed_at: string;
+          match_id: string;
+          mode: string;
+          user_id: string;
+          won: boolean;
+        };
+        Insert: {
+          completed_at?: string;
+          match_id: string;
+          mode: string;
+          user_id: string;
+          won: boolean;
+        };
+        Update: {
+          completed_at?: string;
+          match_id?: string;
+          mode?: string;
+          user_id?: string;
+          won?: boolean;
+        };
+        Relationships: [];
+      };
       room_membership_events: {
         Row: {
           created_at: string;
@@ -786,6 +810,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_win_rate_leaderboard: {
+        Args: { p_mode: string; p_viewer_id: string };
+        Returns: Json;
+      };
       load_room_game_state: { Args: { p_room_id: string }; Returns: Json };
       mark_account_deletion_started: {
         Args: { p_user_id: string };
@@ -812,6 +840,10 @@ export type Database = {
           p_state_patch?: Json;
         };
         Returns: Json;
+      };
+      record_ranked_match: {
+        Args: { p_match_id: string; p_mode: string; p_players: Json };
+        Returns: undefined;
       };
       release_room_membership: {
         Args: {

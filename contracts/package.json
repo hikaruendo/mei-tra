@@ -16,6 +16,10 @@
       "types": "./game-history.ts",
       "default": "./game-history.ts"
     },
+    "./leaderboard": {
+      "types": "./leaderboard.ts",
+      "default": "./leaderboard.ts"
+    },
     "./profile": {
       "types": "./profile.ts",
       "default": "./profile.ts"

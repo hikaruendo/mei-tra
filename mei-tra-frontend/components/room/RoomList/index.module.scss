@@ -26,6 +26,9 @@
   line-height: 1.3;
 }
 
+.listHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.leaderboardLink { color: var(--mt-text-primary); font-weight: 700; text-decoration: underline; text-underline-offset: .2rem; margin-bottom: 1.25rem; }
+
 .createForm {
   display: grid;
   gap: 1.25rem;

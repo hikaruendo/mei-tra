@@ -1,0 +1,17 @@
+.main { max-width: 52rem; margin: 0 auto; padding: 1.5rem; min-height: 70vh; }
+.back { color: var(--mt-text-secondary); display: inline-block; margin-bottom: 1rem; }
+.panel { background: var(--mt-surface-raised); border: 1px solid var(--mt-border-hairline); border-radius: 16px; padding: clamp(1rem, 4vw, 2rem); color: var(--mt-text-primary); }
+.panel h1 { margin: 0 0 .5rem; }
+.hint { color: var(--mt-text-secondary); line-height: 1.5; }
+.tabs { display: flex; gap: .5rem; margin: 1.5rem 0; }
+.tabs button { flex: 1; min-height: 44px; border: 1px solid var(--mt-border-hairline); border-radius: 10px; background: var(--mt-surface-raised-2); color: var(--mt-text-primary); font: inherit; cursor: pointer; }
+.tabs .selected { background: var(--mt-room-normal-bg); color: var(--mt-room-normal-text); font-weight: 700; }
+.me { padding: 1rem; border-radius: 10px; background: var(--mt-surface-raised-2); }
+.list { margin: 0; padding: 0; list-style: none; }
+.row { display: flex; align-items: center; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid var(--mt-border-hairline); min-width: 0; }
+.rank { width: 2.5rem; text-align: center; font-weight: 700; flex: none; }
+.avatar, .avatarPlaceholder { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; flex: none; }
+.avatarPlaceholder { display: grid; place-items: center; background: var(--mt-surface-raised-2); }
+.name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.score { text-align: right; max-width: 40%; overflow-wrap: anywhere; font-weight: 700; }
+.score small { display: block; color: var(--mt-text-secondary); font-weight: 400; }

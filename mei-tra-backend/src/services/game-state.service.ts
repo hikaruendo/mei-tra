@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   GameState,
   DomainPlayer,
@@ -69,6 +70,8 @@ export class GameStateService implements IGameStateService {
   private initializeState(pointsToWin: number = 10): void {
     this.state = {
       version: 0,
+      rankingMatchId: null,
+      rankingComParticipated: false,
       identitySchemaVersion: 2,
       players: [],
       deck: [],
@@ -219,6 +222,16 @@ export class GameStateService implements IGameStateService {
 
   updateState(newState: Partial<GameState>): void {
     this.state = this.stateManager.applyState(this.state, newState);
+    this.markRankingComParticipation();
+  }
+
+  private markRankingComParticipation(): void {
+    if (
+      this.state.rankingMatchId &&
+      this.state.players.some((player) => player.isCOM)
+    ) {
+      this.state.rankingComParticipated = true;
+    }
   }
 
   transitionPhase(nextPhase: GamePhase): void {
@@ -264,6 +277,7 @@ export class GameStateService implements IGameStateService {
   }
 
   async saveState(): Promise<void> {
+    this.markRankingComParticipation();
     this.state = await this.enqueuePersistence(() =>
       this.stateManager.saveState(this.roomId, this.state),
     );
@@ -274,6 +288,12 @@ export class GameStateService implements IGameStateService {
     hostSeatId?: SeatId,
     membershipMutation?: RosterMembershipMutation,
   ): Promise<void> {
+    if (
+      this.state.rankingMatchId &&
+      roomPlayers.some((player) => player.isCOM)
+    ) {
+      this.state.rankingComParticipated = true;
+    }
     this.state = await this.enqueuePersistence(() =>
       this.stateManager.persistRoster(
         this.roomId,
@@ -569,6 +589,8 @@ export class GameStateService implements IGameStateService {
   startGame(): void {
     this.transitionPhase('blow');
     let state = this.getState();
+    state.rankingMatchId = randomUUID();
+    state.rankingComParticipated = state.players.some((player) => player.isCOM);
     state.gameOver = null;
 
     // Initialize game state

@@ -167,6 +167,10 @@ export default function RoomsScreen() {
           </Button>
         </View>
 
+        <Button variant="secondary" onPress={() => router.push('/leaderboard')}>
+          {t('leaderboard.title')} →
+        </Button>
+
         {connectionStatus !== 'connected' ? (
           <ConnectionBanner status={connectionStatus} onRetry={refreshRooms} />
         ) : null}

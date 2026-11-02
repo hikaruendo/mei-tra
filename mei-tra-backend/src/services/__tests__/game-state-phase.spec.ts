@@ -34,6 +34,36 @@ describe('GameStateService phase transitions', () => {
     jest.restoreAllMocks();
   });
 
+  it('creates a fresh ranking identity for each game and remembers COM participation', async () => {
+    repository.update.mockImplementation(async (_roomId, patch) => ({
+      ...service.getState(),
+      ...patch,
+      version: 1,
+    }));
+    const state = service.getState();
+    state.players = [0, 1, 2, 3].map((index) => ({
+      seatId: asSeatId(`seat-${index}`),
+      name: `Player ${index}`,
+      team: (index % 2) as 0 | 1,
+      hand: [],
+      isPasser: false,
+      isCOM: false,
+    }));
+    service.startGame();
+    const firstId = service.getState().rankingMatchId;
+    expect(firstId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(service.getState().rankingComParticipated).toBe(false);
+
+    service.getState().players[1].isCOM = true;
+    await service.saveState();
+    expect(service.getState().rankingComParticipated).toBe(true);
+    service.getState().players[1].isCOM = false;
+    service.getState().gamePhase = 'waiting';
+    service.startGame();
+    expect(service.getState().rankingMatchId).not.toBe(firstId);
+    expect(service.getState().rankingComParticipated).toBe(false);
+  });
+
   it('keeps a legal transition in memory until the action is saved', async () => {
     service.transitionPhase('blow');
 

@@ -7,6 +7,8 @@ import { IRoomService } from '../services/interfaces/room-service.interface';
 import { IGameEventLogService } from '../services/interfaces/game-event-log.service.interface';
 import { SessionUser } from '../types/session.types';
 import type { SeatId } from '@contracts/ids';
+import type { ILeaderboardRepository } from '../repositories/interfaces/leaderboard.repository.interface';
+import { rankedMatchAtGameOver } from '../domain/ranked-match';
 
 @Injectable()
 export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
@@ -17,6 +19,9 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
     @Optional()
     @Inject('IGameEventLogService')
     private readonly gameEventLogService?: IGameEventLogService,
+    @Optional()
+    @Inject('ILeaderboardRepository')
+    private readonly leaderboardRepository?: ILeaderboardRepository,
   ) {}
 
   async execute(request: ProcessGameOverRequest): Promise<void> {
@@ -59,6 +64,24 @@ export class ProcessGameOverUseCase implements IProcessGameOverUseCase {
           userId: string;
         } => player !== null,
       );
+
+    const rankedMatch =
+      this.leaderboardRepository &&
+      roomGameState &&
+      typeof roomGameState.getState === 'function'
+        ? rankedMatchAtGameOver(room, roomGameState.getState(), winningTeam)
+        : null;
+    if (rankedMatch && this.leaderboardRepository) {
+      try {
+        await this.leaderboardRepository.record(
+          rankedMatch.matchId,
+          rankedMatch.mode,
+          rankedMatch.players,
+        );
+      } catch (error) {
+        this.logger.error('Failed to record ranked match', error);
+      }
+    }
 
     const updatePromises = authenticatedPlayers.map(async (player) => {
       const won = player.team === winningTeam;

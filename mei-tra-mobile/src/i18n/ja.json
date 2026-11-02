@@ -251,6 +251,20 @@
     "confirmEmailSent": "確認メールを送信しました。メール内のリンクをクリックすると登録が完了します。",
     "completed": "登録が完了しました。次回からこのメールアドレスとパスワードでログインできます。"
   },
+  "leaderboard": {
+    "title": "ランキング",
+    "modeNormal": "簡単モード",
+    "modePro": "プロモード",
+    "hint": "COMなしの対局を各モード10対局以上プレイすると掲載されます。導入後の対局から集計します。",
+    "loading": "ランキングを読み込み中…",
+    "error": "ランキングを取得できませんでした",
+    "empty": "まだ掲載対象のプレイヤーはいません",
+    "record": "{wins}勝 / {games}対局",
+    "myRank": "あなたは{rank}位（{wins}勝 / {games}対局）",
+    "guestNote": "ゲストの戦績は記録されています。アカウント登録後、10対局以上で掲載されます。",
+    "guestProgress": "対象対局: {games}対局。あと{remaining}対局とアカウント登録で掲載されます。",
+    "progress": "あなたの対象対局: {games}対局。掲載まであと{remaining}対局"
+  },
   "rooms": {
     "loadingAccount": "アカウント情報を読み込んでいます",
     "defaultRoomName": "{name}の部屋",
