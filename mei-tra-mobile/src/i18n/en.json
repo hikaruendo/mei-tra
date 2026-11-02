@@ -251,6 +251,20 @@
     "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
     "completed": "Registration complete. You can sign in with this email and password from now on."
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "modeNormal": "Easy mode",
+    "modePro": "Pro mode",
+    "hint": "Play at least 10 matches without COM players in each mode to qualify. Only matches after launch count.",
+    "loading": "Loading leaderboard…",
+    "error": "Could not load the leaderboard",
+    "empty": "No players qualify yet",
+    "record": "{wins} wins / {games} matches",
+    "myRank": "Your rank: {rank} ({wins} wins / {games} matches)",
+    "guestNote": "Guest results are saved. Register your account to appear after 10 matches.",
+    "guestProgress": "Eligible matches: {games}. Play {remaining} more and register to appear.",
+    "progress": "Your eligible matches: {games}. {remaining} more to qualify."
+  },
   "rooms": {
     "loadingAccount": "Loading your account",
     "defaultRoomName": "{name}'s room",

@@ -99,6 +99,9 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           room_id: roomId,
           state_data: toJsonObject({
             identitySchemaVersion: 2,
+            rankingMatchId: canonicalGameState.rankingMatchId ?? null,
+            rankingComParticipated:
+              canonicalGameState.rankingComParticipated ?? false,
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
             agari: canonicalGameState.agari,
@@ -265,6 +268,13 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const patch: Record<string, unknown> = {};
 
     patch.identitySchemaVersion = 2;
+
+    if (gameState.rankingMatchId !== undefined) {
+      patch.rankingMatchId = gameState.rankingMatchId;
+    }
+    if (gameState.rankingComParticipated !== undefined) {
+      patch.rankingComParticipated = gameState.rankingComParticipated;
+    }
 
     if (gameState.players) {
       patch.playerStates = toPersistedPlayerStates(gameState.players);
@@ -615,6 +625,11 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     return normalizeGameStateIdentity({
       version: dbGameState.version,
       identitySchemaVersion: 2,
+      rankingMatchId:
+        typeof stateData.rankingMatchId === 'string'
+          ? stateData.rankingMatchId
+          : null,
+      rankingComParticipated: stateData.rankingComParticipated === true,
       players,
       currentSeatId: canonicalCurrentSeatId
         ? asSeatId(canonicalCurrentSeatId)

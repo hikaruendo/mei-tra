@@ -161,6 +161,8 @@ export type GamePhase =
 export interface GameState {
   version?: number;
   identitySchemaVersion?: 2;
+  rankingMatchId?: string | null;
+  rankingComParticipated?: boolean;
   players: DomainPlayer[];
   currentSeatId?: SeatId | null;
   gamePhase: GamePhase;

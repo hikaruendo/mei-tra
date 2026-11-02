@@ -275,6 +275,22 @@
     },
     "back": "Back"
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "back": "Back to rooms",
+    "mode": "Mode",
+    "normal": "Easy mode",
+    "pro": "Pro mode",
+    "hint": "Play at least 10 matches without COM players in each mode to qualify. Only matches after the leaderboard launch count.",
+    "loading": "Loading leaderboard…",
+    "error": "Could not load the leaderboard. Please try again later.",
+    "empty": "No players qualify yet.",
+    "record": "{wins} wins / {games} matches",
+    "myRank": "Your rank: {rank} ({wins} wins / {games} matches)",
+    "guestNote": "Guest results are saved. Register your account to appear after 10 matches.",
+    "guestProgress": "Eligible matches: {games}. Play {remaining} more and register to appear.",
+    "progress": "Your eligible matches: {games}. {remaining} more to qualify."
+  },
   "room": {
     "title": "Room List",
     "create": "Create Room",
