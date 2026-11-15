@@ -877,4 +877,63 @@ describe('GameGateway COM recovery integration', () => {
     );
     expect(testGateway.dispatchEvents).toHaveBeenCalledWith(roomSyncEvents);
   });
+
+  describe('when a spectator opens a table', () => {
+    const watch = async (status: 'playing' | 'waiting') => {
+      const gateway = createGateway();
+      const testGateway = gateway as unknown as {
+        activityTracker: { recordActivity: jest.Mock };
+        playerRooms: Map<string, string>;
+        watchRoomUseCase: { execute: jest.Mock };
+        spectatorGatewayEffectsService: { watchRoom: jest.Mock };
+        triggerComAutoPlayIfNeeded: jest.Mock;
+      };
+      testGateway.activityTracker = { recordActivity: jest.fn() };
+      testGateway.playerRooms = new Map();
+      testGateway.watchRoomUseCase = {
+        execute: jest.fn().mockResolvedValue({
+          success: true,
+          data: {
+            room: {
+              id: 'room-1',
+              name: 'Room',
+              hostSeatId: asSeatId('host'),
+              status,
+              players: [],
+              settings: { password: null },
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              lastActivityAt: new Date(),
+            },
+            gameState: {},
+          },
+        }),
+      };
+      testGateway.spectatorGatewayEffectsService = {
+        watchRoom: jest.fn().mockResolvedValue(undefined),
+      };
+      testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+
+      const result = await gateway.handleWatchRoom(
+        { id: 'socket-watch', emit: jest.fn() } as unknown as Socket,
+        { roomId: 'room-1' },
+      );
+      return { result, trigger: testGateway.triggerComAutoPlayIfNeeded };
+    };
+
+    // With every human gone only COM drives play, and after a restart nothing
+    // wakes it until someone looks.
+    it('wakes COM for a game in progress', async () => {
+      const { result, trigger } = await watch('playing');
+
+      expect(result.success).toBe(true);
+      expect(trigger).toHaveBeenCalledWith('room-1');
+    });
+
+    it('leaves a waiting room alone', async () => {
+      const { trigger } = await watch('waiting');
+
+      expect(trigger).not.toHaveBeenCalled();
+    });
+  });
 });
