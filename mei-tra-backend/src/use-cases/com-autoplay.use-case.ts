@@ -39,6 +39,12 @@ import {
   hasPlayerPassedInBlow,
 } from './helpers/blow-action.helper';
 import { getBrokenHandRevealPendingError } from './helpers/broken-hand.helper';
+import {
+  COM_HOST_ROUND_CONFIRM_DELAY_MS,
+  startNextRound,
+} from './helpers/round-completion.helper';
+import { isHostSeatPlayedByCom } from '../domain/host-election';
+import { RoomStatus } from '../types/room.types';
 
 type ResponseWithDelayed<T> = T & {
   delayedEvents?: GatewayEvent[];
@@ -125,6 +131,9 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       if (await getBrokenHandRevealPendingError(gameState)) {
         return { success: true, events: [], shouldContinue: false };
       }
+      if (gameState.getState().gamePhase === 'round-end') {
+        return await this.confirmRoundForComHost(roomId, gameState);
+      }
 
       const currentPlayer = gameState.getCurrentPlayer();
 
@@ -156,6 +165,39 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  // Round results wait for the host. Once every human has gone the host seat
+  // is COM's, so COM confirms after leaving the settlement up for spectators.
+  private async confirmRoundForComHost(
+    roomId: string,
+    gameState: GameStateService,
+  ): Promise<ComAutoPlayResponse> {
+    const room = await this.roomService.getRoom(roomId);
+    if (
+      !room ||
+      room.status !== RoomStatus.PLAYING ||
+      !isHostSeatPlayedByCom(room)
+    ) {
+      return { success: true, events: [], shouldContinue: false };
+    }
+
+    const events = await startNextRound(
+      roomId,
+      gameState,
+      gameState.getState(),
+      room,
+      this.gameEventLogService,
+    );
+    return {
+      success: true,
+      events: [],
+      delayedEvents: events.map((event) => ({
+        ...event,
+        delayMs: Math.max(event.delayMs ?? 0, COM_HOST_ROUND_CONFIRM_DELAY_MS),
+      })),
+      shouldContinue: false,
+    };
   }
 
   private async handleComPlayPhase(

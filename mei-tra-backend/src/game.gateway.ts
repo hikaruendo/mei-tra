@@ -1918,8 +1918,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
       await this.processFieldCompletionResult(data.roomId, result);
-      if (result.delayedEvents) {
-        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      // A round this ends waits in round-end, which COM settles for a COM host.
+      if (!result.gameOver) {
+        this.triggerComAutoPlayAfterEvents(
+          data.roomId,
+          result.delayedEvents ?? [],
+        );
       }
     } catch (error) {
       this.logger.error('Error in handleReportChombo:', error);
@@ -1955,8 +1959,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
       await this.processFieldCompletionResult(data.roomId, result);
-      if (result.delayedEvents) {
-        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      // A round this ends waits in round-end, which COM settles for a COM host.
+      if (!result.gameOver) {
+        this.triggerComAutoPlayAfterEvents(
+          data.roomId,
+          result.delayedEvents ?? [],
+        );
       }
     } catch (error) {
       this.logger.error('Error in handleDeclareOpen:', error);

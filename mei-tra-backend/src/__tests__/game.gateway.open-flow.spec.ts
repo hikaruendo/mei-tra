@@ -98,7 +98,12 @@ describe('GameGateway open behavior', () => {
     await gateway.handleDeclareOpen(client(), { roomId: 'room-1' });
 
     expect(gateway.dispatchEvents).toHaveBeenCalledWith(openEvents);
-    expect(gateway.triggerComAutoPlayAfterEvents).not.toHaveBeenCalled();
+    // Auto-play is woken so a COM host can confirm; for a human host it does
+    // nothing and the round waits for their button.
+    expect(gateway.triggerComAutoPlayAfterEvents).toHaveBeenCalledWith(
+      'room-1',
+      [],
+    );
     expect(gateway.processGameOverUseCase.execute).not.toHaveBeenCalled();
   });
 
