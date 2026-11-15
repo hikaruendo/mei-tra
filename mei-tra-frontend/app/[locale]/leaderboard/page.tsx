@@ -8,7 +8,6 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Navigation } from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
-import { Link } from '@/i18n/routing';
 import styles from './page.module.scss';
 
 function LeaderboardContent() {
@@ -46,7 +45,6 @@ function LeaderboardContent() {
   return <>
     <Navigation />
     <main className={styles.main}>
-      <Link href="/rooms" className={styles.back}>{t('back')}</Link>
       <div className={styles.panel}>
         <h1>{t('title')}</h1>
         <p className={styles.hint}>{t('hint')}</p>
