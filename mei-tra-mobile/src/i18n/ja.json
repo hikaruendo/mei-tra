@@ -452,6 +452,7 @@
     "viewDetails": "詳細を見る",
     "gameHistory": "対局履歴",
     "historyMenuHint": "過去の対局と各ラウンドの手札を確認",
+    "leaderboardHint": "対人戦の勝率をモード別に比べる",
     "profile": "プロフィール",
     "editProfile": "プロフィールを編集",
     "profileEditHint": "対局中に表示される名前と画像を変更できます。",

@@ -452,6 +452,7 @@
     "viewDetails": "View details",
     "gameHistory": "Game history",
     "historyMenuHint": "Review past games, rounds, and hands",
+    "leaderboardHint": "Compare win rates against other players by mode",
     "profile": "Profile",
     "editProfile": "Edit profile",
     "profileEditHint": "Change the name and image shown during games.",

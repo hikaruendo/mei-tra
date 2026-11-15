@@ -3,7 +3,6 @@ import { useTranslations } from 'next-intl';
 import { useRoom } from '@/hooks/useRoom';
 import { useBackendStatus } from '@/hooks/useBackendStatus';
 import { useAuth } from '@/hooks/useAuth';
-import { Link } from '@/i18n/routing';
 import { RoomStatus } from '@/types/room.types';
 import { ConnectionUser } from '@/types/game.types';
 import styles from './index.module.scss';
@@ -210,10 +209,7 @@ export const RoomList: React.FC<RoomListProps> = ({
       </section>
 
       <section className={`${styles.panel} ${styles.listPanel}`} aria-labelledby="room-list-title">
-        <div className={styles.listHeading}>
-          <h2 id="room-list-title" className={styles.sectionTitle}>{t('room.title')}</h2>
-          <Link href="/leaderboard" className={styles.leaderboardLink}>{t('leaderboard.title')} →</Link>
-        </div>
+        <h2 id="room-list-title" className={styles.sectionTitle}>{t('room.title')}</h2>
         <div className={styles.searchRow}>
           <input
             type="text"

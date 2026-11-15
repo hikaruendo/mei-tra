@@ -1,9 +1,9 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import type { LeaderboardMode, LeaderboardResponse } from '@meitra/contracts/leaderboard';
+import { SettingsScaffold } from '@/components/settings/SettingsScaffold';
 import { Button } from '@/components/ui/Button';
-import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { t } from '@/i18n';
@@ -42,10 +42,8 @@ export default function LeaderboardScreen() {
 
   if (!authLoading && !user) return <Redirect href="/sign-in" />;
 
-  return <Screen>
-    <ScrollView contentContainerStyle={styles.content}>
-      <Button variant="ghost" style={styles.back} onPress={() => router.replace('/rooms')}>← {t('rooms.joinable')}</Button>
-      <Text style={styles.title}>{t('leaderboard.title')}</Text>
+  return <SettingsScaffold onBack={() => router.replace('/settings')} title={t('leaderboard.title')}>
+    <View style={styles.body}>
       <Text style={styles.hint}>{t('leaderboard.hint')}</Text>
       <View style={styles.tabs}>
         <Button style={styles.tab} variant={mode === 'normal' ? 'primary' : 'secondary'} onPress={() => setMode('normal')}>{t('leaderboard.modeNormal')}</Button>
@@ -67,14 +65,12 @@ export default function LeaderboardScreen() {
             <View style={styles.score}><Text style={styles.rate}>{entry.winRate.toFixed(1)}%</Text><Text style={styles.record}>{t('leaderboard.record', { wins: entry.gamesWon, games: entry.gamesPlayed })}</Text></View>
           </View>) : <Text style={styles.message}>{t('leaderboard.empty')}</Text>}
         </>}
-    </ScrollView>
-  </Screen>;
+    </View>
+  </SettingsScaffold>;
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 40, gap: 14 },
-  back: { alignSelf: 'flex-start', minHeight: 40 },
-  title: { color: colors.text, fontSize: 28, fontWeight: '700' },
+  body: { gap: 14 },
   hint: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
   tabs: { flexDirection: 'row', gap: 8 },
   tab: { flex: 1 },
