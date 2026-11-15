@@ -2472,6 +2472,123 @@ describe('Reconnection Token Management', () => {
       ).toBeUndefined();
     });
 
+    // Round results only advance on the host's confirmation, so the host must
+    // stay on a seat a person can press the button from.
+    describe('host handoff', () => {
+      const roomId = 'room-host-handoff';
+
+      const seatedTable = (hostSeatId: string, players: RoomPlayer[]) =>
+        bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostSeatId: asSeatId(hostSeatId),
+          status: RoomStatus.PLAYING,
+          players,
+        });
+
+      const seatGamePlayers = async (players: RoomPlayer[]) => {
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().gamePhase = 'round-end';
+        gameState.getState().players = players.map((player) =>
+          makeGamePlayer(player.seatId, player.name, player.team, {
+            isCOM: player.isCOM,
+          }),
+        );
+        return gameState;
+      };
+
+      const connect = (
+        gameState: Awaited<ReturnType<RoomService['getRoomGameState']>>,
+        seatId: string,
+      ) =>
+        gameState.applyPlayerConnectionState(asSeatId(seatId), {
+          socketId: `socket-${seatId}`,
+          userId: `user-${seatId}`,
+          isAuthenticated: true,
+        });
+
+      it('hands the host to a connected human when the host leaves mid-game', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('offline', 'Offline', 1, { userId: 'user-offline' }),
+          makeRoomPlayer('online', 'Online', 0, { userId: 'user-online' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('host', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'host');
+        connect(gameState, 'online');
+
+        await roomService.leaveRoom(roomId, asSeatId('host'));
+
+        // 'offline' is first among the humans but could never press the button.
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('online');
+      });
+
+      it('hands the host on when the host seat times out to COM', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('online', 'Online', 1, { userId: 'user-online' }),
+        ];
+        const table = seatedTable('host', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'online');
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('host'));
+
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('online');
+      });
+
+      it('leaves the host on the COM seat when no human is left', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('host', players);
+        await seatGamePlayers(players);
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('host'));
+
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('host');
+        expect(table.getPersistedRoom()?.players[0].isCOM).toBe(true);
+      });
+
+      it('gives the host to the first human who reclaims a seat while COM holds it', async () => {
+        const players = [
+          makeRoomPlayer('host', 'COM', 0, { isCOM: true }),
+          makeRoomPlayer('returning', 'COM', 1, {
+            isCOM: true,
+            userId: 'user-returning',
+            isAuthenticated: true,
+            participantKey: 'user-returning',
+          }),
+        ];
+        const table = seatedTable('host', players);
+        await seatGamePlayers(players);
+        (
+          roomService as unknown as { vacantSeats: Record<string, unknown> }
+        ).vacantSeats[roomId] = {
+          returning: {
+            roomPlayer: {
+              ...table.getPersistedRoom()!.players[1],
+              name: 'Returning',
+            },
+          },
+        };
+
+        const result = await roomService.handlePlayerReconnection(
+          roomId,
+          asSeatId('returning'),
+          'socket-returning',
+          'user-returning',
+          'Returning',
+        );
+
+        expect(result).toEqual({ success: true });
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('returning');
+      });
+    });
+
     describe('restorePlayerFromVacantSeat', () => {
       it('should restore stored player snapshot into room and game state', async () => {
         const roomId = 'room-restore';

@@ -10,6 +10,7 @@ import {
   setCurrentSeat,
 } from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import { returnHostToHuman } from '../domain/host-election';
 import type { SeatId } from '../types/identity.types';
 
 @Injectable()
@@ -89,6 +90,9 @@ export class SeatRestorationService {
       delete vacantSeats[roomId];
     }
 
+    if (!restoredRoomPlayer.isCOM) {
+      returnHostToHuman(room, seatId);
+    }
     await gameState.persistRoster(room.players, room.hostSeatId);
     const persistedState = gameState.getState();
     const advancedBlowTurn =
