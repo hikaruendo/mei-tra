@@ -803,4 +803,78 @@ describe('GameGateway COM recovery integration', () => {
     expect(testGateway.playerRooms.has('socket-2')).toBe(false);
     expect(testGateway.playerRooms.get('socket-other')).toBe('room-2');
   });
+
+  it('tells the remaining seats who now hosts when the host leaves mid-game', async () => {
+    const gateway = createGateway();
+    const leavingSocket = {
+      id: 'socket-host',
+      data: { user: { id: 'user-host' } },
+      emit: jest.fn(),
+    } as unknown as Socket;
+    const remainingRoom = {
+      id: 'room-1',
+      hostSeatId: asSeatId('seat-p'),
+      players: [],
+    };
+    const roomSyncEvents = [
+      { scope: 'room', roomId: 'room-1', event: 'room-sync', payload: {} },
+    ];
+    const testGateway = gateway as unknown as {
+      leaveRoomUseCase: { execute: jest.Mock };
+      roomService: { getRoom: jest.Mock };
+      roomUpdateGatewayEffectsService: {
+        buildPlayersEvent: jest.Mock;
+        buildRoomEvents: jest.Mock;
+      };
+      server: { to: jest.Mock };
+      dispatchEvents: jest.Mock;
+      emitRoomsListToAll: jest.Mock;
+      queueSpectatorSnapshot: jest.Mock;
+      triggerComAutoPlayIfNeeded: jest.Mock;
+    };
+    testGateway.leaveRoomUseCase = {
+      execute: jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          seatId: asSeatId('seat-host'),
+          roomDeleted: false,
+          roomsList: [],
+          room: remainingRoom,
+          statePlayers: [],
+          updatedPlayers: [],
+        },
+      }),
+    };
+    testGateway.roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        players: [
+          { seatId: asSeatId('seat-host'), userId: 'user-host', isCOM: false },
+        ],
+      }),
+    };
+    testGateway.roomUpdateGatewayEffectsService = {
+      buildPlayersEvent: jest.fn().mockReturnValue({ event: 'update-players' }),
+      buildRoomEvents: jest.fn().mockResolvedValue(roomSyncEvents),
+    };
+    testGateway.server = { to: jest.fn().mockReturnValue({ emit: jest.fn() }) };
+    testGateway.dispatchEvents = jest.fn();
+    testGateway.emitRoomsListToAll = jest.fn();
+    testGateway.queueSpectatorSnapshot = jest.fn();
+    testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+
+    await gateway.handleLeaveRoom(leavingSocket, { roomId: 'room-1' });
+
+    // Web reads the host only from room-sync, so without it the new host never
+    // sees the button that starts the next round.
+    expect(
+      testGateway.roomUpdateGatewayEffectsService.buildRoomEvents,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        room: remainingRoom,
+        scope: 'room',
+        roomId: 'room-1',
+      }),
+    );
+    expect(testGateway.dispatchEvents).toHaveBeenCalledWith(roomSyncEvents);
+  });
 });

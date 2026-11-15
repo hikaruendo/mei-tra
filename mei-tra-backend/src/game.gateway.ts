@@ -1127,6 +1127,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         seatId: leftSeatId,
         roomDeleted,
         roomsList,
+        room: remainingRoom,
+        statePlayers,
         updatedPlayers,
         gamePausedMessage,
         blowState,
@@ -1171,6 +1173,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomId: data.roomId,
           }),
         ]);
+      }
+      // Web reads the host only from room-sync, so a host who leaves mid-game
+      // would otherwise leave the new host without a "next round" button.
+      if (remainingRoom) {
+        this.dispatchEvents(
+          await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+            room: remainingRoom,
+            statePlayers,
+            scope: 'room',
+            roomId: data.roomId,
+          }),
+        );
       }
       if (blowState) {
         this.server.to(data.roomId).emit('blow-updated', {
