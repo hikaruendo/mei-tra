@@ -4,8 +4,8 @@
 .panel h1 { margin: 0 0 .5rem; }
 .hint { color: var(--mt-text-secondary); line-height: 1.5; }
 .tabs { display: flex; gap: .5rem; margin: 1.5rem 0; }
-.tabs button { flex: 1; min-height: 44px; border: 1px solid var(--mt-border-hairline); border-radius: 10px; background: var(--mt-surface-raised-2); color: var(--mt-text-primary); font: inherit; cursor: pointer; }
-.tabs .selected { background: var(--mt-room-normal-bg); color: var(--mt-room-normal-text); font-weight: 700; }
+.tabs button { flex: 1; min-height: 44px; border: 1px solid var(--mt-border-hairline); border-radius: 10px; background: transparent; color: var(--mt-text-secondary); font: inherit; cursor: pointer; }
+.tabs .selected { border-color: var(--mt-accent); background: var(--mt-accent-subtle); color: var(--mt-text-primary); font-weight: 700; }
 .me { padding: 1rem; border-radius: 10px; background: var(--mt-surface-raised-2); }
 .list { margin: 0; padding: 0; list-style: none; }
 .empty { margin: 1.5rem 0 0; }
