@@ -1,64 +1,54 @@
 import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
-import type { LeaderboardMode, LeaderboardResponse } from '@meitra/contracts/leaderboard';
+import { LEADERBOARD_MODES, type LeaderboardMode } from '@meitra/contracts/leaderboard';
+import {
+  describeLeaderboardStanding,
+  type LeaderboardStanding,
+} from '@meitra/api-client/leaderboard';
 import { SettingsScaffold } from '@/components/settings/SettingsScaffold';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
+import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { t } from '@/i18n';
-import { fetchLeaderboard } from '@/lib/leaderboard-api';
 import { colors } from '@/theme/colors';
+
+const MODE_LABEL_KEYS = { normal: 'leaderboard.modeNormal', pro: 'leaderboard.modePro' } as const;
+
+function standingText(standing: LeaderboardStanding): string {
+  switch (standing.kind) {
+    case 'ranked':
+      return t('leaderboard.myRank', { rank: standing.rank, wins: standing.gamesWon, games: standing.gamesPlayed });
+    case 'progress':
+      return t('leaderboard.progress', { games: standing.gamesPlayed, remaining: standing.remaining });
+    case 'guestQualified':
+      return t('leaderboard.guestNote', { minimumGames: standing.minimumGames });
+    case 'guestProgress':
+      return t('leaderboard.guestProgress', { games: standing.gamesPlayed, remaining: standing.remaining });
+  }
+}
 
 export default function LeaderboardScreen() {
   useLocale();
   const router = useRouter();
   const { user, loading: authLoading, getAccessToken } = useAuth();
   const [mode, setMode] = useState<LeaderboardMode>('normal');
-  const [data, setData] = useState<LeaderboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    let active = true;
-    setLoading(true);
-    setError(false);
-    setData(null);
-    void (async () => {
-      try {
-        const token = await getAccessToken();
-        if (!token) throw new Error('No session');
-        const result = await fetchLeaderboard(mode, token);
-        if (active) setData(result);
-      } catch {
-        if (active) setError(true);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [getAccessToken, mode, user?.id]);
+  const { leaderboard, isLoading, hasError } = useLeaderboard(mode, user?.id, getAccessToken);
 
   if (!authLoading && !user) return <Redirect href="/sign-in" />;
 
   return <SettingsScaffold onBack={() => router.replace('/settings')} title={t('leaderboard.title')}>
     <View style={styles.body}>
       <View style={styles.tabs}>
-        <Button style={styles.tab} variant={mode === 'normal' ? 'primary' : 'secondary'} onPress={() => setMode('normal')}>{t('leaderboard.modeNormal')}</Button>
-        <Button style={styles.tab} variant={mode === 'pro' ? 'primary' : 'secondary'} onPress={() => setMode('pro')}>{t('leaderboard.modePro')}</Button>
+        {LEADERBOARD_MODES.map((value) => <Button key={value} style={styles.tab} variant={mode === value ? 'primary' : 'secondary'} onPress={() => setMode(value)}>{t(MODE_LABEL_KEYS[value])}</Button>)}
       </View>
-      {loading || authLoading ? <ActivityIndicator accessibilityLabel={t('leaderboard.loading')} color={colors.gold} />
-        : error || !data ? <Text style={styles.message}>{t('leaderboard.error')}</Text>
+      {isLoading || authLoading ? <ActivityIndicator accessibilityLabel={t('leaderboard.loading')} color={colors.gold} />
+        : hasError || !leaderboard ? <Text style={styles.message}>{t('leaderboard.error')}</Text>
         : <>
-          <Text style={styles.hint}>{t('leaderboard.hint', { minimumGames: data.minimumGames })}</Text>
-          <Text style={styles.progress}>{user?.isAnonymous ? (data.me?.gamesPlayed ?? 0) >= data.minimumGames
-            ? t('leaderboard.guestNote', { minimumGames: data.minimumGames })
-            : t('leaderboard.guestProgress', { games: data.me?.gamesPlayed ?? 0, remaining: data.minimumGames - (data.me?.gamesPlayed ?? 0) })
-            : data.me?.rank
-            ? t('leaderboard.myRank', { rank: data.me.rank, wins: data.me.gamesWon, games: data.me.gamesPlayed })
-            : t('leaderboard.progress', { games: data.me?.gamesPlayed ?? 0, remaining: Math.max(0, data.minimumGames - (data.me?.gamesPlayed ?? 0)) })}</Text>
-          {data.entries.length ? data.entries.map((entry) => <View key={entry.userId} style={styles.row}>
+          <Text style={styles.hint}>{t('leaderboard.hint', { minimumGames: leaderboard.minimumGames })}</Text>
+          <Text style={styles.progress}>{standingText(describeLeaderboardStanding(leaderboard, Boolean(user?.isAnonymous)))}</Text>
+          {leaderboard.entries.length ? leaderboard.entries.map((entry) => <View key={entry.userId} style={styles.row}>
             <Text style={styles.rank}>{entry.rank}</Text>
             {entry.avatarUrl ? <Image source={{ uri: entry.avatarUrl }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><Text style={styles.initial}>{entry.displayName.charAt(0)}</Text></View>}
             <Text style={styles.name}>{entry.displayName}</Text>

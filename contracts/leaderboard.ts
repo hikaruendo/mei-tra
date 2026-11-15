@@ -1,4 +1,10 @@
-export type LeaderboardMode = 'normal' | 'pro';
+export const LEADERBOARD_MODES = ['normal', 'pro'] as const;
+
+export type LeaderboardMode = (typeof LEADERBOARD_MODES)[number];
+
+export function isLeaderboardMode(value: unknown): value is LeaderboardMode {
+  return LEADERBOARD_MODES.includes(value as LeaderboardMode);
+}
 
 export interface LeaderboardEntry {
   userId: string;

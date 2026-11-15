@@ -21,7 +21,7 @@ import {
 } from '../../adapters/player-adapters';
 import type { Database } from '../../types/database.generated.types';
 import { RoomPlayer } from '../../types/room.types';
-import { asSeatId } from '../../types/identity.types';
+import { asRankingMatchId, asSeatId } from '../../types/identity.types';
 import type { SeatId } from '../../types/identity.types';
 import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
@@ -622,7 +622,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
       identitySchemaVersion: 2,
       rankingMatchId:
         typeof stateData.rankingMatchId === 'string'
-          ? stateData.rankingMatchId
+          ? asRankingMatchId(stateData.rankingMatchId)
           : null,
       players,
       currentSeatId: canonicalCurrentSeatId

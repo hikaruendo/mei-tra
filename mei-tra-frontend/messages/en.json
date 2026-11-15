@@ -279,8 +279,8 @@
   "leaderboard": {
     "title": "Leaderboard",
     "mode": "Mode",
-    "normal": "Easy mode",
-    "pro": "Pro mode",
+    "modeNormal": "Easy mode",
+    "modePro": "Pro mode",
     "hint": "Play at least {minimumGames} matches without COM players in each mode to qualify. Only matches after the leaderboard launch count.",
     "loading": "Loading leaderboard…",
     "error": "Could not load the leaderboard. Please try again later.",

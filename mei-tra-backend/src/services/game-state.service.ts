@@ -27,7 +27,7 @@ import {
 } from '../adapters/player-adapters';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
-import { asSeatId } from '../types/identity.types';
+import { asRankingMatchId, asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayer,
@@ -574,7 +574,7 @@ export class GameStateService implements IGameStateService {
     this.transitionPhase('blow');
     let state = this.getState();
     // The database takes this match's participants when this ID is first saved.
-    state.rankingMatchId = randomUUID();
+    state.rankingMatchId = asRankingMatchId(randomUUID());
     state.gameOver = null;
 
     // Initialize game state

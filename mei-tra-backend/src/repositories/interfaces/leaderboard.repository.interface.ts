@@ -4,5 +4,8 @@ import type {
 } from '@contracts/leaderboard';
 
 export interface ILeaderboardRepository {
-  get(mode: LeaderboardMode, viewerId: string): Promise<LeaderboardResponse>;
+  getWinRateLeaderboard(
+    mode: LeaderboardMode,
+    viewerId: string,
+  ): Promise<LeaderboardResponse>;
 }

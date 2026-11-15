@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isLeaderboardMode } from '@contracts/leaderboard';
 import { getBackendApiUrl } from '@/lib/backend-api';
 
 export async function GET(request: NextRequest) {
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
   }
   const mode = request.nextUrl.searchParams.get('mode');
-  if (mode !== 'normal' && mode !== 'pro') {
+  if (!isLeaderboardMode(mode)) {
     return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });
   }
   const response = await fetch(getBackendApiUrl(`/leaderboard?mode=${mode}`), {

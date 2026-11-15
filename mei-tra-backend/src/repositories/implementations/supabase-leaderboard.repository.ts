@@ -3,6 +3,7 @@ import type {
   LeaderboardMode,
   LeaderboardResponse,
 } from '@contracts/leaderboard';
+import { toLeaderboardResponse } from '../../adapters/leaderboard-adapters';
 import { SupabaseService } from '../../database/supabase.service';
 import { ILeaderboardRepository } from '../interfaces/leaderboard.repository.interface';
 
@@ -10,7 +11,7 @@ import { ILeaderboardRepository } from '../interfaces/leaderboard.repository.int
 export class SupabaseLeaderboardRepository implements ILeaderboardRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async get(
+  async getWinRateLeaderboard(
     mode: LeaderboardMode,
     viewerId: string,
   ): Promise<LeaderboardResponse> {
@@ -22,22 +23,6 @@ export class SupabaseLeaderboardRepository implements ILeaderboardRepository {
       },
     );
     if (error) throw new Error(`Failed to fetch leaderboard: ${error.message}`);
-    if (
-      !data ||
-      typeof data !== 'object' ||
-      Array.isArray(data) ||
-      typeof data.minimumGames !== 'number' ||
-      !Array.isArray(data.entries) ||
-      !('me' in data)
-    ) {
-      throw new Error('Invalid leaderboard response');
-    }
-    const result = data as unknown as Omit<LeaderboardResponse, 'mode'>;
-    return {
-      mode,
-      minimumGames: result.minimumGames,
-      entries: result.entries,
-      me: result.me,
-    };
+    return toLeaderboardResponse(mode, data);
   }
 }
