@@ -8,6 +8,7 @@
 .tabs .selected { background: var(--mt-room-normal-bg); color: var(--mt-room-normal-text); font-weight: 700; }
 .me { padding: 1rem; border-radius: 10px; background: var(--mt-surface-raised-2); }
 .list { margin: 0; padding: 0; list-style: none; }
+.empty { margin: 1.5rem 0 0; }
 .row { display: flex; align-items: center; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid var(--mt-border-hairline); min-width: 0; }
 .rank { width: 2.5rem; text-align: center; font-weight: 700; flex: none; }
 .avatar, .avatarPlaceholder { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; flex: none; }

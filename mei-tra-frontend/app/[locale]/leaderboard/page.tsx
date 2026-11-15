@@ -70,7 +70,7 @@ function LeaderboardContent() {
               <span className={styles.name}>{entry.displayName}</span>
               <span className={styles.score}>{entry.winRate.toFixed(1)}%<small>{t('record', { wins: entry.gamesWon, games: entry.gamesPlayed })}</small></span>
             </li>)}
-          </ol> : <p>{t('empty')}</p>}
+          </ol> : <p className={styles.empty}>{t('empty')}</p>}
         </>}
       </div>
     </main>
