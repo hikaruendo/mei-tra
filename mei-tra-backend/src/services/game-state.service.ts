@@ -537,6 +537,7 @@ export class GameStateService implements IGameStateService {
   resetRoundState(): void {
     // Keep the current players, scores, and game settings
     const version = this.state.version;
+    const rankingMatchId = this.state.rankingMatchId;
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
     const teamScoreRecords = { ...this.state.teamScoreRecords };
@@ -547,6 +548,7 @@ export class GameStateService implements IGameStateService {
 
     // Restore players and scores
     this.state.version = version;
+    this.state.rankingMatchId = rankingMatchId;
     this.state.players = players;
     this.state.teamScores = teamScores;
     this.state.teamScoreRecords = teamScoreRecords;
