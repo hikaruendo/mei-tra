@@ -100,8 +100,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           state_data: toJsonObject({
             identitySchemaVersion: 2,
             rankingMatchId: canonicalGameState.rankingMatchId ?? null,
-            rankingComParticipated:
-              canonicalGameState.rankingComParticipated ?? false,
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
             agari: canonicalGameState.agari,
@@ -271,9 +269,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
 
     if (gameState.rankingMatchId !== undefined) {
       patch.rankingMatchId = gameState.rankingMatchId;
-    }
-    if (gameState.rankingComParticipated !== undefined) {
-      patch.rankingComParticipated = gameState.rankingComParticipated;
     }
 
     if (gameState.players) {
@@ -629,7 +624,6 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
         typeof stateData.rankingMatchId === 'string'
           ? stateData.rankingMatchId
           : null,
-      rankingComParticipated: stateData.rankingComParticipated === true,
       players,
       currentSeatId: canonicalCurrentSeatId
         ? asSeatId(canonicalCurrentSeatId)

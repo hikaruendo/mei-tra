@@ -488,6 +488,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      ranked_match_participants: {
+        Row: {
+          match_id: string;
+          team: number;
+          user_id: string;
+        };
+        Insert: {
+          match_id: string;
+          team: number;
+          user_id: string;
+        };
+        Update: {
+          match_id?: string;
+          team?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       ranking_results: {
         Row: {
           completed_at: string;

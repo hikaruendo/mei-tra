@@ -13,6 +13,18 @@ create index ranking_results_mode_user_idx on public.ranking_results (mode, user
 alter table public.ranking_results enable row level security;
 revoke all on public.ranking_results from anon, authenticated;
 
+-- The four people who start a match. A player who leaves is replaced by a COM
+-- that finishes the seat, and the result of that seat still goes to them.
+create table public.ranked_match_participants (
+  match_id uuid not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  team smallint not null check (team in (0, 1)),
+  primary key (match_id, user_id)
+);
+
+alter table public.ranked_match_participants enable row level security;
+revoke all on public.ranked_match_participants from anon, authenticated;
+
 create or replace function public.record_ranked_match(
   p_match_id uuid,
   p_mode text,
@@ -44,55 +56,72 @@ begin
 end;
 $$;
 
--- The game-over snapshot and its ranking result commit together. A failed
+-- Runs inside the game-state write. The participants commit with the save that
+-- starts the match, and the result with the save that ends it, so a failed
 -- ranking write cannot silently leave an unranked finished match behind.
-create or replace function meitra_private.capture_ranked_match_at_game_over()
+create or replace function meitra_private.capture_ranked_match()
 returns trigger
 language plpgsql security definer
 set search_path = pg_catalog, public
 as $$
 declare
-  match_id uuid;
-  winning_team integer;
-  match_mode text;
-  players jsonb;
-  player_count integer;
-  distinct_user_count integer;
-  all_human boolean;
+  v_match_id uuid := (new.state_data->>'rankingMatchId')::uuid;
+  v_winning_team integer;
+  v_mode text;
+  v_players jsonb;
+  v_participant_count integer;
 begin
+  if v_match_id is null then
+    return new;
+  end if;
+
+  -- A match starts. Only one that four people start is ranked, so a game that
+  -- begins with COM seats records no participants.
+  if v_match_id is distinct from (old.state_data->>'rankingMatchId')::uuid
+    and (
+      select count(*) = 4
+        and count(distinct rp.user_id) = 4
+        and bool_and(not rp.is_com and rp.user_id is not null and rp.team in (0, 1))
+      from public.room_players rp
+      where rp.room_id = new.room_id
+    )
+  then
+    insert into public.ranked_match_participants (match_id, user_id, team)
+    select v_match_id, rp.user_id, rp.team
+    from public.room_players rp
+    where rp.room_id = new.room_id
+    on conflict do nothing;
+  end if;
+
   if new.state_data->'gameOver' is null
     or new.state_data->'gameOver' = 'null'::jsonb
     or old.state_data->'gameOver' is not distinct from new.state_data->'gameOver'
-    or new.state_data->>'rankingMatchId' is null
-    or coalesce((new.state_data->>'rankingComParticipated')::boolean, false)
   then
     return new;
   end if;
 
-  match_id := (new.state_data->>'rankingMatchId')::uuid;
-  winning_team := (new.state_data #>> '{gameOver,winningTeam}')::integer;
-  select coalesce(r.settings->>'gameMode', 'normal') into match_mode
-  from public.rooms r where r.id = new.room_id;
+  -- The match ends. Each participant gets the result of the team they started
+  -- on, whoever is in the seat now.
+  v_winning_team := (new.state_data #>> '{gameOver,winningTeam}')::integer;
+  select count(*),
+         jsonb_agg(jsonb_build_object('user_id', p.user_id,
+           'won', p.team = v_winning_team))
+    into v_participant_count, v_players
+  from public.ranked_match_participants p
+  where p.match_id = v_match_id;
 
-  select count(*), count(distinct rp.user_id),
-         bool_and(not rp.is_com and rp.user_id is not null and rp.team in (0, 1)),
-         jsonb_agg(jsonb_build_object('user_id', rp.user_id,
-           'won', rp.team = winning_team) order by rp.seat_index)
-    into player_count, distinct_user_count, all_human, players
-  from public.room_players rp where rp.room_id = new.room_id;
-
-  if winning_team in (0, 1) and player_count = 4
-    and distinct_user_count = 4 and all_human
-  then
-    perform public.record_ranked_match(match_id, match_mode, players);
+  if v_winning_team in (0, 1) and v_participant_count = 4 then
+    select coalesce(r.settings->>'gameMode', 'normal') into v_mode
+    from public.rooms r where r.id = new.room_id;
+    perform public.record_ranked_match(v_match_id, v_mode, v_players);
   end if;
   return new;
 end;
 $$;
 
-create trigger capture_ranked_match_at_game_over
+create trigger capture_ranked_match
 after update of state_data on public.game_states
-for each row execute function meitra_private.capture_ranked_match_at_game_over();
+for each row execute function meitra_private.capture_ranked_match();
 
 create or replace function public.get_win_rate_leaderboard(
   p_mode text,
