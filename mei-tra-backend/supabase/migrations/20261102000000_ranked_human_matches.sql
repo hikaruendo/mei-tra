@@ -1,64 +1,40 @@
--- Ranking results are independent of the short-lived room/history retention.
--- The match ID is generated at game start, so a rematch in the same room is distinct.
-create table public.ranking_results (
-  match_id uuid not null,
-  user_id uuid not null references auth.users(id) on delete cascade,
+-- Ranked records outlive rooms and game history. A ranked match is a game that
+-- four people start; the match ID comes from the game state at game start, so
+-- a rematch in the same room is a different match.
+create table public.ranked_matches (
+  match_id uuid primary key,
   mode text not null check (mode in ('normal', 'pro')),
-  won boolean not null,
-  completed_at timestamptz not null default now(),
-  primary key (match_id, user_id)
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  winning_team smallint check (winning_team in (0, 1)),
+  -- A match that has not finished has no winner, and one that has, has one.
+  check ((completed_at is null) = (winning_team is null))
 );
 
-create index ranking_results_mode_user_idx on public.ranking_results (mode, user_id);
-alter table public.ranking_results enable row level security;
-revoke all on public.ranking_results from anon, authenticated;
-
--- The four people who start a match. A player who leaves is replaced by a COM
--- that finishes the seat, and the result of that seat still goes to them.
+-- The four people who start a match. Each keeps the result of the team they
+-- started on, whoever finishes their seat. Deleting an account removes only
+-- that person's row, so their opponents' results stay.
 create table public.ranked_match_participants (
-  match_id uuid not null,
+  match_id uuid not null references public.ranked_matches(match_id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   team smallint not null check (team in (0, 1)),
   primary key (match_id, user_id)
 );
 
+create index ranked_match_participants_user_idx
+  on public.ranked_match_participants (user_id);
+create index ranked_matches_completed_mode_idx
+  on public.ranked_matches (mode)
+  where completed_at is not null;
+
+alter table public.ranked_matches enable row level security;
 alter table public.ranked_match_participants enable row level security;
+revoke all on public.ranked_matches from anon, authenticated;
 revoke all on public.ranked_match_participants from anon, authenticated;
 
-create or replace function public.record_ranked_match(
-  p_match_id uuid,
-  p_mode text,
-  p_players jsonb
-) returns void
-language plpgsql security definer
-set search_path = pg_catalog, public
-as $$
-begin
-  if p_match_id is null or p_mode not in ('normal', 'pro')
-    or jsonb_typeof(p_players) <> 'array' or jsonb_array_length(p_players) <> 4
-    or (select count(distinct user_id) from jsonb_to_recordset(p_players)
-        as p(user_id uuid, won boolean)) <> 4
-    or exists (select 1 from jsonb_to_recordset(p_players)
-        as p(user_id uuid, won boolean) where user_id is null or won is null)
-  then
-    raise exception 'invalid ranked match';
-  end if;
-
-  -- A function call is one transaction: retries cannot leave a partial match.
-  if exists (select 1 from public.ranking_results where match_id = p_match_id) then
-    return;
-  end if;
-
-  insert into public.ranking_results (match_id, user_id, mode, won)
-  select p_match_id, p.user_id, p_mode, p.won
-  from jsonb_to_recordset(p_players) as p(user_id uuid, won boolean)
-  on conflict do nothing;
-end;
-$$;
-
--- Runs inside the game-state write. The participants commit with the save that
--- starts the match, and the result with the save that ends it, so a failed
--- ranking write cannot silently leave an unranked finished match behind.
+-- Runs inside the game-state write, so a match and its participants commit
+-- with the save that starts the game, and the result with the save that ends
+-- it. It does two things only: record who starts a match, and record who won.
 create or replace function meitra_private.capture_ranked_match()
 returns trigger
 language plpgsql security definer
@@ -67,16 +43,13 @@ as $$
 declare
   v_match_id uuid := (new.state_data->>'rankingMatchId')::uuid;
   v_winning_team integer;
-  v_mode text;
-  v_players jsonb;
-  v_participant_count integer;
 begin
   if v_match_id is null then
     return new;
   end if;
 
   -- A match starts. Only one that four people start is ranked, so a game that
-  -- begins with COM seats records no participants.
+  -- begins with COM seats records nothing.
   if v_match_id is distinct from (old.state_data->>'rankingMatchId')::uuid
     and (
       select count(*) = 4
@@ -86,6 +59,12 @@ begin
       where rp.room_id = new.room_id
     )
   then
+    insert into public.ranked_matches (match_id, mode)
+    select v_match_id, coalesce(r.settings->>'gameMode', 'normal')
+    from public.rooms r
+    where r.id = new.room_id
+    on conflict (match_id) do nothing;
+
     insert into public.ranked_match_participants (match_id, user_id, team)
     select v_match_id, rp.user_id, rp.team
     from public.room_players rp
@@ -100,21 +79,18 @@ begin
     return new;
   end if;
 
-  -- The match ends. Each participant gets the result of the team they started
-  -- on, whoever is in the seat now.
+  -- The match ends. Only the winning team is recorded; each participant's
+  -- result follows from the team they started on.
   v_winning_team := (new.state_data #>> '{gameOver,winningTeam}')::integer;
-  select count(*),
-         jsonb_agg(jsonb_build_object('user_id', p.user_id,
-           'won', p.team = v_winning_team))
-    into v_participant_count, v_players
-  from public.ranked_match_participants p
-  where p.match_id = v_match_id;
-
-  if v_winning_team in (0, 1) and v_participant_count = 4 then
-    select coalesce(r.settings->>'gameMode', 'normal') into v_mode
-    from public.rooms r where r.id = new.room_id;
-    perform public.record_ranked_match(v_match_id, v_mode, v_players);
+  if v_winning_team is null or v_winning_team not in (0, 1) then
+    return new;
   end if;
+
+  update public.ranked_matches
+  set winning_team = v_winning_team,
+      completed_at = now()
+  where match_id = v_match_id
+    and completed_at is null;
   return new;
 end;
 $$;
@@ -137,17 +113,18 @@ begin
   end if;
 
   with totals as (
-    select r.user_id, count(*)::integer as games_played,
-           count(*) filter (where r.won)::integer as games_won
-    from public.ranking_results r
-    where r.mode = p_mode
-    group by r.user_id
+    select p.user_id, count(*)::integer as games_played,
+           count(*) filter (where p.team = m.winning_team)::integer as games_won
+    from public.ranked_match_participants p
+    join public.ranked_matches m on m.match_id = p.match_id
+    where m.mode = p_mode and m.completed_at is not null
+    group by p.user_id
   ), eligible as (
-    select t.*, p.display_name, p.avatar_url
+    select t.*, pr.display_name, pr.avatar_url
     from totals t
     join auth.users u on u.id = t.user_id and u.is_anonymous = false
-    join public.user_profiles p on p.id = t.user_id
-      and p.account_deletion_started_at is null
+    join public.user_profiles pr on pr.id = t.user_id
+      and pr.account_deletion_started_at is null
     where t.games_played >= 10
   ), ranked as (
     select e.*, rank() over (
@@ -183,7 +160,5 @@ begin
 end;
 $$;
 
-revoke all on function public.record_ranked_match(uuid, text, jsonb) from public, anon, authenticated;
 revoke all on function public.get_win_rate_leaderboard(text, uuid) from public, anon, authenticated;
-grant execute on function public.record_ranked_match(uuid, text, jsonb) to service_role;
 grant execute on function public.get_win_rate_leaderboard(text, uuid) to service_role;

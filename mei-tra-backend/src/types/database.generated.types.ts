@@ -504,29 +504,37 @@ export type Database = {
           team?: number;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'ranked_match_participants_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'ranked_matches';
+            referencedColumns: ['match_id'];
+          },
+        ];
       };
-      ranking_results: {
+      ranked_matches: {
         Row: {
-          completed_at: string;
+          completed_at: string | null;
           match_id: string;
           mode: string;
-          user_id: string;
-          won: boolean;
+          started_at: string;
+          winning_team: number | null;
         };
         Insert: {
-          completed_at?: string;
+          completed_at?: string | null;
           match_id: string;
           mode: string;
-          user_id: string;
-          won: boolean;
+          started_at?: string;
+          winning_team?: number | null;
         };
         Update: {
-          completed_at?: string;
+          completed_at?: string | null;
           match_id?: string;
           mode?: string;
-          user_id?: string;
-          won?: boolean;
+          started_at?: string;
+          winning_team?: number | null;
         };
         Relationships: [];
       };
@@ -858,10 +866,6 @@ export type Database = {
           p_state_patch?: Json;
         };
         Returns: Json;
-      };
-      record_ranked_match: {
-        Args: { p_match_id: string; p_mode: string; p_players: Json };
-        Returns: undefined;
       };
       release_room_membership: {
         Args: {
