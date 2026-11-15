@@ -20,7 +20,7 @@ export interface LeaderboardSelf {
 
 export interface LeaderboardResponse {
   mode: LeaderboardMode;
-  minimumGames: 10;
+  minimumGames: number;
   entries: LeaderboardEntry[];
   me: LeaderboardSelf | null;
 }

@@ -106,7 +106,10 @@ create or replace function public.get_win_rate_leaderboard(
 language plpgsql security definer stable
 set search_path = pg_catalog, public
 as $$
-declare result jsonb;
+declare
+  -- The only place the qualifying match count is set; clients read it from the result.
+  v_minimum_games constant integer := 10;
+  result jsonb;
 begin
   if p_mode not in ('normal', 'pro') then
     raise exception 'invalid ranking mode';
@@ -125,7 +128,7 @@ begin
     join auth.users u on u.id = t.user_id and u.is_anonymous = false
     join public.user_profiles pr on pr.id = t.user_id
       and pr.account_deletion_started_at is null
-    where t.games_played >= 10
+    where t.games_played >= v_minimum_games
   ), ranked as (
     select e.*, rank() over (
       order by e.games_won::numeric / e.games_played desc
@@ -137,6 +140,7 @@ begin
     from eligible e
   )
   select jsonb_build_object(
+    'minimumGames', v_minimum_games,
     'entries', coalesce((
       select jsonb_agg(jsonb_build_object(
         'userId', user_id, 'displayName', display_name,

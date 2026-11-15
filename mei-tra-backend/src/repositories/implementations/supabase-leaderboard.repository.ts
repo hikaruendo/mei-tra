@@ -26,15 +26,18 @@ export class SupabaseLeaderboardRepository implements ILeaderboardRepository {
       !data ||
       typeof data !== 'object' ||
       Array.isArray(data) ||
+      typeof data.minimumGames !== 'number' ||
       !Array.isArray(data.entries) ||
       !('me' in data)
     ) {
       throw new Error('Invalid leaderboard response');
     }
-    const result = data as unknown as Pick<
-      LeaderboardResponse,
-      'entries' | 'me'
-    >;
-    return { mode, minimumGames: 10, entries: result.entries, me: result.me };
+    const result = data as unknown as Omit<LeaderboardResponse, 'mode'>;
+    return {
+      mode,
+      minimumGames: result.minimumGames,
+      entries: result.entries,
+      me: result.me,
+    };
   }
 }

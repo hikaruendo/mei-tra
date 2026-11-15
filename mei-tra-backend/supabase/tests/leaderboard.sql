@@ -39,6 +39,9 @@ begin
   end loop;
 
   result := public.get_win_rate_leaderboard('normal', players[1]);
+  if (result->>'minimumGames')::integer is distinct from 10 then
+    raise exception 'The qualifying match count was not returned: %', result;
+  end if;
   if jsonb_array_length(result->'entries') <> 0 then
     raise exception 'Players ranked before 10 matches';
   end if;

@@ -44,21 +44,21 @@ export default function LeaderboardScreen() {
 
   return <SettingsScaffold onBack={() => router.replace('/settings')} title={t('leaderboard.title')}>
     <View style={styles.body}>
-      <Text style={styles.hint}>{t('leaderboard.hint')}</Text>
       <View style={styles.tabs}>
         <Button style={styles.tab} variant={mode === 'normal' ? 'primary' : 'secondary'} onPress={() => setMode('normal')}>{t('leaderboard.modeNormal')}</Button>
         <Button style={styles.tab} variant={mode === 'pro' ? 'primary' : 'secondary'} onPress={() => setMode('pro')}>{t('leaderboard.modePro')}</Button>
       </View>
       {loading || authLoading ? <ActivityIndicator accessibilityLabel={t('leaderboard.loading')} color={colors.gold} />
-        : error ? <Text style={styles.message}>{t('leaderboard.error')}</Text>
+        : error || !data ? <Text style={styles.message}>{t('leaderboard.error')}</Text>
         : <>
-          <Text style={styles.progress}>{user?.isAnonymous ? (data?.me?.gamesPlayed ?? 0) >= 10
-            ? t('leaderboard.guestNote')
-            : t('leaderboard.guestProgress', { games: data?.me?.gamesPlayed ?? 0, remaining: 10 - (data?.me?.gamesPlayed ?? 0) })
-            : data?.me?.rank
+          <Text style={styles.hint}>{t('leaderboard.hint', { minimumGames: data.minimumGames })}</Text>
+          <Text style={styles.progress}>{user?.isAnonymous ? (data.me?.gamesPlayed ?? 0) >= data.minimumGames
+            ? t('leaderboard.guestNote', { minimumGames: data.minimumGames })
+            : t('leaderboard.guestProgress', { games: data.me?.gamesPlayed ?? 0, remaining: data.minimumGames - (data.me?.gamesPlayed ?? 0) })
+            : data.me?.rank
             ? t('leaderboard.myRank', { rank: data.me.rank, wins: data.me.gamesWon, games: data.me.gamesPlayed })
-            : t('leaderboard.progress', { games: data?.me?.gamesPlayed ?? 0, remaining: Math.max(0, 10 - (data?.me?.gamesPlayed ?? 0)) })}</Text>
-          {data?.entries.length ? data.entries.map((entry) => <View key={entry.userId} style={styles.row}>
+            : t('leaderboard.progress', { games: data.me?.gamesPlayed ?? 0, remaining: Math.max(0, data.minimumGames - (data.me?.gamesPlayed ?? 0)) })}</Text>
+          {data.entries.length ? data.entries.map((entry) => <View key={entry.userId} style={styles.row}>
             <Text style={styles.rank}>{entry.rank}</Text>
             {entry.avatarUrl ? <Image source={{ uri: entry.avatarUrl }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><Text style={styles.initial}>{entry.displayName.charAt(0)}</Text></View>}
             <Text style={styles.name}>{entry.displayName}</Text>

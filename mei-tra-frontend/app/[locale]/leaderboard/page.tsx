@@ -47,21 +47,20 @@ function LeaderboardContent() {
     <main className={styles.main}>
       <div className={styles.panel}>
         <h1>{t('title')}</h1>
-        <p className={styles.hint}>{t('hint')}</p>
         <div className={styles.tabs} role="tablist" aria-label={t('mode')}>
           {(['normal', 'pro'] as const).map((value) => <button key={value}
             type="button" role="tab" aria-selected={mode === value}
             className={mode === value ? styles.selected : ''}
             onClick={() => setMode(value)}>{t(value)}</button>)}
         </div>
-        {loading ? <p role="status">{t('loading')}</p> : error ? <p role="alert">{t('error')}</p> : <>
-          {user?.isAnonymous ? <p className={styles.me}>{(data?.me?.gamesPlayed ?? 0) >= 10
-            ? t('guestNote')
-            : t('guestProgress', { games: data?.me?.gamesPlayed ?? 0, remaining: 10 - (data?.me?.gamesPlayed ?? 0) })}</p> : data?.me && <p className={styles.me}>{data.me.rank
+        {loading ? <p role="status">{t('loading')}</p> : error || !data ? <p role="alert">{t('error')}</p> : <>
+          <p className={styles.hint}>{t('hint', { minimumGames: data.minimumGames })}</p>
+          {user?.isAnonymous ? <p className={styles.me}>{(data.me?.gamesPlayed ?? 0) >= data.minimumGames
+            ? t('guestNote', { minimumGames: data.minimumGames })
+            : t('guestProgress', { games: data.me?.gamesPlayed ?? 0, remaining: data.minimumGames - (data.me?.gamesPlayed ?? 0) })}</p> : <p className={styles.me}>{data.me?.rank
             ? t('myRank', { rank: data.me.rank, wins: data.me.gamesWon, games: data.me.gamesPlayed })
-            : t('progress', { games: data.me.gamesPlayed, remaining: Math.max(0, 10 - data.me.gamesPlayed) })}</p>}
-          {!user?.isAnonymous && !data?.me && <p className={styles.me}>{t('progress', { games: 0, remaining: 10 })}</p>}
-          {data?.entries.length ? <ol className={styles.list}>
+            : t('progress', { games: data.me?.gamesPlayed ?? 0, remaining: Math.max(0, data.minimumGames - (data.me?.gamesPlayed ?? 0)) })}</p>}
+          {data.entries.length ? <ol className={styles.list}>
             {data.entries.map((entry) => <li key={entry.userId} className={styles.row}>
               <span className={styles.rank}>{entry.rank}</span>
               {entry.avatarUrl ? <Image className={styles.avatar} src={entry.avatarUrl} alt="" width={40} height={40} unoptimized /> : <span className={styles.avatarPlaceholder} aria-hidden="true">{entry.displayName.charAt(0)}</span>}
