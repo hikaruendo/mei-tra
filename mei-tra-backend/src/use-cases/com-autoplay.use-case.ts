@@ -44,7 +44,8 @@ import {
   startNextRound,
 } from './helpers/round-completion.helper';
 import { isHostSeatPlayedByCom } from '../domain/host-election';
-import { RoomStatus } from '../types/room.types';
+import { isWaitingForAbsentOwner } from '../domain/absent-owner';
+import { Room, RoomStatus } from '../types/room.types';
 
 type ResponseWithDelayed<T> = T & {
   delayedEvents?: GatewayEvent[];
@@ -131,8 +132,17 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
       if (await getBrokenHandRevealPendingError(gameState)) {
         return { success: true, events: [], shouldContinue: false };
       }
+      const room = await this.roomService.getRoom(roomId);
+      if (
+        room &&
+        isWaitingForAbsentOwner(room.players, (seatId) =>
+          Boolean(gameState.getPlayerConnectionState(seatId)?.socketId),
+        )
+      ) {
+        return { success: true, events: [], shouldContinue: false };
+      }
       if (gameState.getState().gamePhase === 'round-end') {
-        return await this.confirmRoundForComHost(roomId, gameState);
+        return await this.confirmRoundForComHost(roomId, room, gameState);
       }
 
       const currentPlayer = gameState.getCurrentPlayer();
@@ -167,13 +177,13 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     }
   }
 
-  // Round results wait for the host. Once every human has gone the host seat
-  // is COM's, so COM confirms after leaving the settlement up for spectators.
+  // Round results wait for the host. The host seat is only COM's when nobody
+  // owns any seat, so COM confirms after leaving the settlement up for spectators.
   private async confirmRoundForComHost(
     roomId: string,
+    room: Room | null,
     gameState: GameStateService,
   ): Promise<ComAutoPlayResponse> {
-    const room = await this.roomService.getRoom(roomId);
     if (
       !room ||
       room.status !== RoomStatus.PLAYING ||

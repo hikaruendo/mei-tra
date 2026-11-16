@@ -33,6 +33,7 @@ const buildUseCase = (options: {
 
   const roomService = {
     getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+    getRoom: jest.fn().mockResolvedValue(null),
   };
 
   return new ComAutoPlayUseCase(
