@@ -502,7 +502,7 @@ GitHub Actionsの`Backend Load Test`は手動実行専用です。対象HTTPS or
 
 `mei-tra-backend/load/game-load.mjs`は、ゲームの業務負荷を測るローカル専用のハーネスです。部屋ごとに匿名ゲストのホスト1人とCOM 3席で実際の対局を進めるので、認証・部屋作成・ブロウ・プレイ・ラウンド結果・状態の書き込みまで通ります。計測区間のサーバーCPU時間、ヒープ、backendがPostgREST経由で実行したSQL（`pg_stat_statements`の`service_role`分）を、1分あたりと1手あたりのJSONで出力します。
 
-対象はローカルのbackendとローカルSupabaseに限っており、それ以外のURLを渡すと実行しません。本番に近い数値を取るため、backendはビルド済みの`dist/main.js`を本番と同じ`--max-old-space-size=320`で起動してから実行します。
+対象はローカルのbackendとローカルSupabaseに限っており、それ以外のURLを渡すと実行しません。ローカルSupabaseのURLとキーは`supabase status`から読みます（`SUPABASE_URL`と`SUPABASE_ANON_KEY`で上書きできます）。本番に近い数値を取るため、backendはビルド済みの`dist/main.js`を本番と同じ`--max-old-space-size=320`で起動してから実行します。
 
 ```bash
 npm run build
@@ -510,7 +510,7 @@ node --max-old-space-size=320 dist/main.js
 ROOMS=10 npm run load:game
 ```
 
-ハーネスが切断しても部屋はCOMが引き継いで打ち続けます。部屋数を変えて測り直すときは、backendを止めてから`npm run load:game -- --cleanup`で`loadtest-`で始まる部屋を削除し、起動し直してから次を測ります。匿名サインインはローカル設定で1時間に30件までなので、作ったゲストのセッションは`load/.guest-sessions.json`（git管理外）に保存して使い回します。
+ハーネスが切断すると、部屋はホストの戻りを待って止まり、ロビーに「プレイ中」として残ります。部屋数を変えて測り直すときは、backendを止めてから`npm run load:game -- --cleanup`で`loadtest-`で始まる部屋を削除し、起動し直してから次を測ります。匿名サインインはローカル設定で1時間に30件までなので、作ったゲストのセッションは`load/.guest-sessions.json`（git管理外）に保存して使い回します。
 
 ホストは手番が来るとすぐ打つため、1部屋あたりの手数は人間の対局より多くなります。容量を見積もるときは、`cpuMsPerAction`、`dbCallsPerAction`、`dbMsPerAction`を実際の手の速さに掛けて換算します。
 

@@ -11,13 +11,13 @@
 //   ROOMS=10 npm run load:game
 //   npm run load:game -- --cleanup   # stop the backend first; see below
 //
-// Rooms keep playing with COM in every seat after this script disconnects, so
-// between runs stop the backend, run --cleanup to delete the `loadtest-` rooms,
-// and start it again.
+// After this script disconnects, each room waits for its host to come back and
+// stays listed in the lobby, so between runs stop the backend, run --cleanup to
+// delete the `loadtest-` rooms, and start it again.
 //
 // Env: ROOMS (default 1), WARMUP_S (20), MEASURE_S (90),
 //      BACKEND_URL (http://localhost:3333),
-//      SUPABASE_URL / SUPABASE_ANON_KEY (default: `supabase status`),
+//      SUPABASE_URL / SUPABASE_ANON_KEY (default: the `supabase` CLI's status),
 //      SESSIONS_FILE (load/.guest-sessions.json), DB_CONTAINER.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -98,7 +98,9 @@ function supabaseConfig() {
       anonKey: process.env.SUPABASE_ANON_KEY,
     };
   }
-  const status = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
+  // The CLI installed for `supabase start`; `npx supabase` may fetch a newer one
+  // that rejects this repo's config.toml.
+  const status = execFileSync('supabase', ['status', '-o', 'env'], {
     cwd: backendDir,
     stdio: ['ignore', 'pipe', 'ignore'],
   }).toString();
@@ -295,7 +297,6 @@ function startHost(index, session) {
       {
         name: `${ROOM_PREFIX}${index}`,
         pointsToWin: 50,
-        teamAssignmentMethod: 'random',
         gameMode: 'normal',
       },
       (created) => {
@@ -428,6 +429,7 @@ while (Date.now() - startedAt < MEASURE_S * 1000) {
   await sleep(5000);
   memory.push(await backendMemory());
 }
+if (!memory.length) memory.push(await backendMemory());
 const cpuAfter = cpuSeconds(pid);
 const sqlAfter = appSql();
 const minutes = (Date.now() - startedAt) / 60000;
