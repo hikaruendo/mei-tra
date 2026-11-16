@@ -3,6 +3,8 @@ import { PlayerGameplayState, TeamNames } from './game.types';
 import type { SeatId } from './identity.types';
 import { SessionUser } from './session.types';
 
+export { isGameMode } from '@contracts/room';
+
 export enum RoomStatus {
   WAITING = 'waiting',
   READY = 'ready',

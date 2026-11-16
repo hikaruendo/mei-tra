@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { DevChomboScenarioType } from '@contracts/game';
+import type { GameMode } from '@contracts/room';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
-import type { GameMode } from '@contracts/room';
 
 interface GameDockProps {
   roomId: string;

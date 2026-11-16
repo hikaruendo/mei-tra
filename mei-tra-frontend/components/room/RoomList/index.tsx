@@ -4,9 +4,9 @@ import { useRoom } from '@/hooks/useRoom';
 import { useBackendStatus } from '@/hooks/useBackendStatus';
 import { useAuth } from '@/hooks/useAuth';
 import { RoomStatus } from '@/types/room.types';
+import type { GameMode } from '@contracts/room';
 import { ConnectionUser } from '@/types/game.types';
 import styles from './index.module.scss';
-import type { GameMode } from '@contracts/room';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
   switch (status) {

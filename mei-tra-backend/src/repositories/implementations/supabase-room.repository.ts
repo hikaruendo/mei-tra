@@ -2,9 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../database/supabase.service';
 import { toJsonObject } from '../../database/json-value';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
-import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
+import {
+  Room,
+  RoomStatus,
+  RoomPlayer,
+  isGameMode,
+} from '../../types/room.types';
 import type { Database } from '../../types/database.generated.types';
-import { isGameMode } from '@contracts/room';
 import { asSeatId } from '../../types/identity.types';
 import type { GameParticipant } from '../../types/game-participant.types';
 
