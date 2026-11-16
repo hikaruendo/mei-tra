@@ -1399,6 +1399,29 @@ describe('Game Use Cases', () => {
   });
 
   describe('ChangePlayerTeamUseCase', () => {
+    it.each([
+      RoomStatus.READY,
+      RoomStatus.PLAYING,
+      RoomStatus.FINISHED,
+      RoomStatus.ABANDONED,
+    ])('rejects team changes once the room is %s', async (status) => {
+      const roomService = createRoomServiceMock();
+      const useCase = new ChangePlayerTeamUseCase(roomService);
+      roomService.getRoom.mockResolvedValue({ ...baseRoom, status });
+
+      const result = await useCase.execute({
+        roomId: baseRoom.id,
+        actorSeatId: asSeatId('player-1'),
+        teamChanges: { 'player-1': 1, 'player-2': 0 },
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Teams can only be changed while waiting',
+      });
+      expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
+    });
+
     it('rejects team change when exceeding max members', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new ChangePlayerTeamUseCase(roomService);

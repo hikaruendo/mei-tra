@@ -6,6 +6,7 @@ import {
 } from './interfaces/change-player-team.use-case.interface';
 import { IRoomService } from '../services/interfaces/room-service.interface';
 import { Team } from '../types/game.types';
+import { RoomStatus } from '../types/room.types';
 
 @Injectable()
 export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
@@ -23,6 +24,13 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
       const room = await this.roomService.getRoom(roomId);
       if (!room) {
         return { success: false, error: 'Room not found' };
+      }
+
+      if (room.status !== RoomStatus.WAITING) {
+        return {
+          success: false,
+          error: 'Teams can only be changed while waiting',
+        };
       }
 
       // Find the requesting player
