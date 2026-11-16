@@ -4,6 +4,7 @@ import type {
   PlayerLeftPayload,
 } from '@contracts/game';
 import type {
+  GameMode,
   RoomContract,
   RoomPlayerJoinedPayload,
   RoomSyncPayload,
@@ -388,7 +389,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   ]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: 'normal' | 'pro' = 'normal'): Promise<boolean> => {
+  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: GameMode = 'normal'): Promise<boolean> => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {

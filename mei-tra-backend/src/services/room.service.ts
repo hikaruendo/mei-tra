@@ -5,7 +5,7 @@ import {
   OnModuleDestroy,
   Optional,
 } from '@nestjs/common';
-import { Room, RoomPlayer } from '../types/room.types';
+import { GameMode, Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
@@ -182,7 +182,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     hostUser: SessionUser,
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
-    gameMode: 'normal' | 'pro' = 'normal',
+    gameMode: GameMode = 'normal',
   ): Promise<Room> {
     if (!hostUser.userId) {
       throw new Error('Authenticated host user is required');

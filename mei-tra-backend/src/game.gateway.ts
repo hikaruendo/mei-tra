@@ -18,6 +18,7 @@ import type {
 import type { UpdateTeamNamesPayload } from '@contracts/room';
 import type {
   ChangePlayerTeamPayload,
+  CreateRoomPayload,
   LeaveRoomPayload,
   ModeratePlayerPayload,
   RevealBrokenHandPayload,
@@ -817,13 +818,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('create-room')
   async handleCreateRoom(
     @ConnectedSocket() client: Socket,
-    @MessageBody()
-    data: {
-      name: string;
-      pointsToWin: number;
-      teamAssignmentMethod: 'random' | 'host-choice';
-      gameMode?: 'normal' | 'pro';
-    },
+    @MessageBody() data: CreateRoomPayload,
   ) {
     this.activityTracker.recordActivity();
 

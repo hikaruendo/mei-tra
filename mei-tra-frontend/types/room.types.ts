@@ -1,4 +1,5 @@
 import type {
+  GameMode,
   RoomContract,
   RoomPlayerContract,
   RoomStatusContract,
@@ -32,7 +33,7 @@ export interface RoomSettings {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
   teamNames?: TeamNames;
 }
 

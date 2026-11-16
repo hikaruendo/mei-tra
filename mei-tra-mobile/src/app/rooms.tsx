@@ -22,6 +22,7 @@ import { colors } from '@/theme/colors';
 import { palette } from '@/theme/palette';
 import { t } from '@/i18n';
 import { useLocale } from '@/context/LocaleContext';
+import type { GameMode } from '@meitra/contracts/room';
 
 export default function RoomsScreen() {
   // Re-render this screen when the app language changes; t() is a bare
@@ -45,8 +46,8 @@ export default function RoomsScreen() {
   } = useGame();
   const [roomName, setRoomName] = useState('');
   const [pointsToWin, setPointsToWin] = useState('5');
-  const [creatingMode, setCreatingMode] = useState<'normal' | 'pro' | null>(null);
-  const [activeModeTooltip, setActiveModeTooltip] = useState<'normal' | 'pro' | null>(null);
+  const [creatingMode, setCreatingMode] = useState<GameMode | null>(null);
+  const [activeModeTooltip, setActiveModeTooltip] = useState<GameMode | null>(null);
   const creatingRoomRef = useRef(false);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -96,7 +97,7 @@ export default function RoomsScreen() {
     user?.email?.split('@')[0] ||
     'Player';
 
-  const handleCreate = async (gameMode: 'normal' | 'pro') => {
+  const handleCreate = async (gameMode: GameMode) => {
     if (submitting || creatingRoomRef.current || connectionStatus !== 'connected') return;
     creatingRoomRef.current = true;
     setSubmitting(true);

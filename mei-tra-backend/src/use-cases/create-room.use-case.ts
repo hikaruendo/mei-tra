@@ -8,6 +8,7 @@ import {
 import { ChatService } from '../services/chat.service';
 import { SessionUser } from '../types/session.types';
 import { ActiveRoomMembershipConflictError } from '../types/room-membership.types';
+import { isGameMode } from '../types/room.types';
 
 type ChatRoomCreator = {
   createRoom(
@@ -43,11 +44,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
         authenticatedUser,
       } = request;
 
-      if (
-        gameMode !== undefined &&
-        gameMode !== 'normal' &&
-        gameMode !== 'pro'
-      ) {
+      if (gameMode !== undefined && !isGameMode(gameMode)) {
         return { success: false, errorMessage: 'Invalid game mode' };
       }
 

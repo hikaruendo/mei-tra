@@ -18,6 +18,7 @@ import { GameStateService } from '../../services/game-state.service';
 import { IGameStateRepository } from '../../repositories/interfaces/game-state.repository.interface';
 import type { LogGameEventInput } from '../../services/interfaces/game-event-log.service.interface';
 import { asSeatId } from '../../types/identity.types';
+import type { GameMode } from '../../types/room.types';
 
 export async function createGame(
   hand: string[],
@@ -93,7 +94,7 @@ export async function createGame(
       return Promise.resolve();
     }),
   };
-  const room: { settings: { gameMode: 'pro' | 'normal' } } = {
+  const room: { settings: { gameMode: GameMode } } = {
     settings: { gameMode: 'pro' },
   };
   const roomService = {
