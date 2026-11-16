@@ -1,5 +1,5 @@
 import { asSeatId } from '../types/identity.types';
-import { isWaitingForAbsentOwner } from './absent-owner';
+import { isLastPersonAtTable, isWaitingForAbsentOwner } from './absent-owner';
 
 const seat = (
   id: string,
@@ -40,5 +40,20 @@ describe('isWaitingForAbsentOwner', () => {
   it('lets COM finish a game that nobody owns', () => {
     const players = [seat('a', { isCOM: true }), seat('b', { isCOM: true })];
     expect(isWaitingForAbsentOwner(players, connected())).toBe(false);
+  });
+});
+
+describe('isLastPersonAtTable', () => {
+  it('is true when everyone else at the table is COM', () => {
+    const players = [
+      seat('a', { userId: 'user-a' }),
+      seat('b', { isCOM: true, userId: 'user-b' }),
+    ];
+    expect(isLastPersonAtTable(players, asSeatId('a'))).toBe(true);
+  });
+
+  it('is false while another person is still seated', () => {
+    const players = [seat('a'), seat('b')];
+    expect(isLastPersonAtTable(players, asSeatId('a'))).toBe(false);
   });
 });

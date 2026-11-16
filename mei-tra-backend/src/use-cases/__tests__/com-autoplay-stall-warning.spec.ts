@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
+import { createComAutoPlayUseCase } from './com-autoplay.fixture';
 import { DomainPlayer } from '../../types/game.types';
 import { asSeatId } from '../../types/identity.types';
 
@@ -36,18 +36,7 @@ const buildUseCase = (options: {
     getRoom: jest.fn().mockResolvedValue(null),
   };
 
-  return new ComAutoPlayUseCase(
-    roomService as never,
-    { isComPlayer: () => false } as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
+  return createComAutoPlayUseCase(roomService, () => false);
 };
 
 describe('ComAutoPlayUseCase stall instrumentation', () => {

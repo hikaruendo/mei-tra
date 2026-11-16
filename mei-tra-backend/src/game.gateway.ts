@@ -969,7 +969,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       this.dispatchEvents(joinEffects.events);
-      // Coming back to a game that was waiting for its owner resumes COM.
       if (joinEffects.room.status === RoomStatus.PLAYING) {
         this.triggerComAutoPlayIfNeeded(data.roomId);
       }

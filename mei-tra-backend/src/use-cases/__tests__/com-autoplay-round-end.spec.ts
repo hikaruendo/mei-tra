@@ -1,4 +1,4 @@
-import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
+import { createComAutoPlayUseCase } from './com-autoplay.fixture';
 import {
   COM_HOST_ROUND_CONFIRM_DELAY_MS,
   startNextRound,
@@ -55,18 +55,7 @@ const buildUseCase = (options: {
     getRoom: jest.fn().mockResolvedValue(room),
   };
 
-  return new ComAutoPlayUseCase(
-    roomService as never,
-    { isComPlayer: () => true } as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
+  return createComAutoPlayUseCase(roomService, () => true);
 };
 
 describe('ComAutoPlayUseCase at round end', () => {

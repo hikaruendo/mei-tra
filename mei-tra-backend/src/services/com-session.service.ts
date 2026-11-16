@@ -9,6 +9,7 @@ import { asSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import { electHost } from '../domain/host-election';
+import { holdSeatFor, isLastPersonAtTable } from '../domain/absent-owner';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -200,12 +201,9 @@ export class ComSessionService {
       uniqueIdx,
       room.players[playerIndex],
     );
-    const keepsSeatOwner =
-      membershipMutation?.type === 'complete-disconnect-timeout';
-    if (keepsSeatOwner) {
-      comPlayer.userId = room.players[playerIndex].userId;
-      comPlayer.isAuthenticated = room.players[playerIndex].isAuthenticated;
-      comPlayer.participantKey = room.players[playerIndex].participantKey;
+    const timedOut = membershipMutation?.type === 'complete-disconnect-timeout';
+    if (timedOut || isLastPersonAtTable(room.players, seatId)) {
+      holdSeatFor(comPlayer, room.players[playerIndex]);
     }
 
     const resolvedSeatId = room.players[playerIndex].seatId;
@@ -241,8 +239,9 @@ export class ComSessionService {
       room.hostSeatId,
       membershipMutation,
     );
-    if (!keepsSeatOwner) {
-      // The old occupant can no longer act for or reconnect to this seat.
+    if (!timedOut) {
+      // The old occupant can no longer act for this seat. If COM is holding it
+      // for them, they take it back by rejoining from the lobby.
       gameState.detachSeatOccupant(seatId);
     }
     return true;

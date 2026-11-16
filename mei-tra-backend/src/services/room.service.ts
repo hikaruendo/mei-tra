@@ -29,6 +29,11 @@ import { randomUUID } from 'crypto';
 import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import { electHost, returnHostToHuman } from '../domain/host-election';
+import {
+  holdSeatFor,
+  isLastPersonAtTable,
+  ownsSeat,
+} from '../domain/absent-owner';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -162,21 +167,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
   async listRooms(): Promise<Room[]> {
     const rooms = await this.roomRepository.findAll();
-    return (
-      rooms
-        .map((room) => this.normalizeRoomHostFlags(room))
-        .filter(
-          (room) =>
-            room.status !== RoomStatus.FINISHED &&
-            room.status !== RoomStatus.ABANDONED,
-        )
-        // A game waiting for the person who left stays listed so they can rejoin.
-        .filter((room) =>
-          room.players.some(
-            (player) => !player.isCOM || Boolean(player.userId),
-          ),
-        )
-    );
+    return rooms
+      .map((room) => this.normalizeRoomHostFlags(room))
+      .filter(
+        (room) =>
+          room.status !== RoomStatus.FINISHED &&
+          room.status !== RoomStatus.ABANDONED,
+      )
+      .filter((room) => room.players.some(ownsSeat));
   }
 
   async createNewRoom(
@@ -453,15 +451,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           uniqueIdx,
           leavingPlayer,
         );
-        // The last person to leave keeps their seat, so the game waits for
-        // them and they can pick it up later, even after a restart.
-        const isLastPersonLeaving = room.players.every(
-          (p) => p.isCOM || p.seatId === seatId,
-        );
-        if (isGameInProgress && isLastPersonLeaving && leavingPlayer.userId) {
-          comPlayer.userId = leavingPlayer.userId;
-          comPlayer.isAuthenticated = leavingPlayer.isAuthenticated;
-          comPlayer.participantKey = leavingPlayer.participantKey;
+        if (isGameInProgress && isLastPersonAtTable(room.players, seatId)) {
+          holdSeatFor(comPlayer, leavingPlayer);
         }
 
         const resolvedSeatId = room.players[playerIndex].seatId;
@@ -508,8 +499,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState.removeSeatToken(seatId);
     }
 
-    // A game in progress waits for the person who left; anything else with no
-    // people left is deleted.
     if (!isGameInProgress && room.players.every((p) => p.isCOM === true)) {
       await this.deleteRoom(roomId);
       return true;

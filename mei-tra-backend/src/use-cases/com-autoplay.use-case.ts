@@ -177,8 +177,9 @@ export class ComAutoPlayUseCase implements IComAutoPlayUseCase {
     }
   }
 
-  // Round results wait for the host. The host seat is only COM's when nobody
-  // owns any seat, so COM confirms after leaving the settlement up for spectators.
+  // Round results wait for the host. A COM host confirms them itself, after
+  // leaving the settlement up for spectators; a game waiting for an absent
+  // owner never gets this far.
   private async confirmRoundForComHost(
     roomId: string,
     room: Room | null,

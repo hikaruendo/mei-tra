@@ -1,4 +1,4 @@
-import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
+import { createComAutoPlayUseCase } from './com-autoplay.fixture';
 import { RoomStatus } from '../../types/room.types';
 import { asSeatId } from '../../types/identity.types';
 
@@ -30,18 +30,7 @@ const buildUseCase = (ownerConnected: boolean) => {
       ],
     }),
   };
-  const useCase = new ComAutoPlayUseCase(
-    roomService as never,
-    { isComPlayer: () => false } as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
+  const useCase = createComAutoPlayUseCase(roomService, () => false);
   return { useCase, getCurrentPlayer };
 };
 
