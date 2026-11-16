@@ -62,3 +62,6 @@ backups/
 # Tracked schema sources
 !supabase/migrations/*.sql
 !supabase/tests/*.sql
+
+# Guest sessions saved by load/game-load.mjs
+load/.guest-sessions.json
