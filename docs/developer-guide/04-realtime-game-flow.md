@@ -104,7 +104,7 @@ UseCase は「何が起きたか」を決めます。EffectsService は、その
 
 ## 3. ルームを作る
 
-ルーム作成は `RoomList` から始まります。frontend は `create-room` event を送ります。payload には room 名、pointsToWin、teamAssignmentMethod などが入ります。
+ルーム作成は `RoomList` から始まります。frontend は `create-room` event を送ります。payload には room 名、pointsToWin、gameMode などが入ります。
 
 ### 3.1 backend 側の主処理
 
@@ -509,7 +509,7 @@ message は `ChatService.postMessage()` を通って `chat_messages` に永続�
 
 | event | 主な payload | 用途 |
 | --- | --- | --- |
-| `create-room` | room 名, pointsToWin, teamAssignmentMethod | ルーム作成 |
+| `create-room` | room 名, pointsToWin, gameMode | ルーム作成 |
 | `join-room` | roomId, user | ルーム参加 |
 | `list-rooms` | なし | 一覧取得 |
 | `toggle-player-ready` | roomId | ready 切替。actor seatはserverが認証sessionから解決 |

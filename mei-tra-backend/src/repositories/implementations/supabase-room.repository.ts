@@ -74,7 +74,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
           maxPlayers: room.settings.maxPlayers,
           isPrivate: room.settings.isPrivate,
           password: room.settings.password,
-          teamAssignmentMethod: room.settings.teamAssignmentMethod,
           pointsToWin: room.settings.pointsToWin,
           allowSpectators: room.settings.allowSpectators,
           gameMode: room.settings.gameMode ?? 'normal',
@@ -409,8 +408,6 @@ export class SupabaseRoomRepository implements IRoomRepository {
       typeof value.maxPlayers === 'number' &&
       typeof value.isPrivate === 'boolean' &&
       (typeof value.password === 'string' || value.password === null) &&
-      (value.teamAssignmentMethod === 'random' ||
-        value.teamAssignmentMethod === 'host-choice') &&
       typeof value.pointsToWin === 'number' &&
       typeof value.allowSpectators === 'boolean' &&
       (value.gameMode === undefined || isGameMode(value.gameMode)) &&

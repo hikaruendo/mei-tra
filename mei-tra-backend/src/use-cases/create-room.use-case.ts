@@ -37,7 +37,6 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       const {
         roomName,
         pointsToWin,
-        teamAssignmentMethod,
         gameMode,
         playerName,
         socketId,
@@ -78,15 +77,9 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
             roomName,
             hostUser,
             pointsToWin,
-            teamAssignmentMethod,
             gameMode,
           )
-        : await this.roomService.createNewRoom(
-            roomName,
-            hostUser,
-            pointsToWin,
-            teamAssignmentMethod,
-          );
+        : await this.roomService.createNewRoom(roomName, hostUser, pointsToWin);
       createdRoomId = room.id;
 
       const joined = await this.roomService.joinRoom(room.id, hostUser);

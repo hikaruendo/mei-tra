@@ -21,7 +21,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random' as const,
         pointsToWin: 7,
         allowSpectators: true,
       },
@@ -69,7 +68,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
         pointsToWin: 8,
         allowSpectators: true,
       },
@@ -155,7 +153,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random' as const,
         pointsToWin: 8,
         allowSpectators: true,
       },
@@ -264,6 +261,44 @@ describe('SupabaseRoomRepository', () => {
       'room-1-player-1',
       'room-1-player-2',
     ]);
+  });
+
+  it('reads a room whose stored settings still carry teamAssignmentMethod', async () => {
+    const row = createRoomRow(
+      'room-1',
+      'Old room',
+      '2026-04-16T00:00:00.000Z',
+      'room-1-player-1',
+    );
+    const legacyRow = {
+      ...row,
+      settings: { ...row.settings, teamAssignmentMethod: 'host-choice' },
+    };
+    const single = jest
+      .fn()
+      .mockResolvedValue({ data: legacyRow, error: null });
+    const playerOrderBySeatIndex = jest
+      .fn()
+      .mockResolvedValue({ data: [], error: null });
+    const from = jest.fn((table: string) =>
+      table === 'rooms'
+        ? { select: () => ({ eq: () => ({ single }) }) }
+        : {
+            select: () => ({
+              in: () => ({
+                order: () => ({ order: playerOrderBySeatIndex }),
+              }),
+            }),
+          },
+    );
+    const repository = new SupabaseRoomRepository({
+      client: { from },
+    } as unknown as SupabaseService);
+
+    await expect(repository.findById('room-1')).resolves.toMatchObject({
+      id: 'room-1',
+      settings: { pointsToWin: 7 },
+    });
   });
 
   it('queries recent finished rooms by user ordered by last activity', async () => {

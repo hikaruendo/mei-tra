@@ -98,7 +98,6 @@ describe('DisconnectGatewayEffectsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       pointsToWin: 7,
-      teamAssignmentMethod: 'random' as const,
     };
     const updatedRoom = {
       ...initialRoom,

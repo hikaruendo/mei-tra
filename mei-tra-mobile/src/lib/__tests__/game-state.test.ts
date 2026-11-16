@@ -174,7 +174,6 @@ describe('recovery helpers', () => {
             maxPlayers: 4,
             isPrivate: false,
             password: null,
-            teamAssignmentMethod: 'random',
             pointsToWin: 5,
             allowSpectators: true,
           },
