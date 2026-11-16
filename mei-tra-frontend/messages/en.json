@@ -22,6 +22,7 @@
   },
   "nav": {
     "rooms": "Rooms",
+    "leaderboard": "Leaderboard",
     "tutorial": "Docs",
     "discord": "Discord",
     "x": "X",
@@ -274,6 +275,22 @@
       "emailAlreadyRegistered": "This email is already registered. Please sign in with that account (guest stats will not carry over)."
     },
     "back": "Back"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "mode": "Mode",
+    "modeNormal": "Easy mode",
+    "modePro": "Pro mode",
+    "hint": "Play at least {minimumGames} matches in a mode, each started by four players, to be listed for that mode. A match you leave without returning to your starting team counts as a loss. Only matches after the leaderboard launch count.",
+    "loading": "Loading leaderboard…",
+    "error": "Could not load the leaderboard. Please try again later.",
+    "empty": "No players qualify yet.",
+    "record": "{wins} wins / {games} matches",
+    "myRank": "Your rank: {rank} ({wins} wins / {games} matches)",
+    "guestNote": "Guest results are saved. Register your account to appear after {minimumGames} matches.",
+    "guestProgress": "Eligible matches: {games}. Play {remaining} more and register to appear.",
+    "progress": "Your eligible matches: {games}. {remaining} more to qualify.",
+    "unlisted": "Eligible matches: {games}. You meet the requirement but are not listed right now."
   },
   "room": {
     "title": "Room List",

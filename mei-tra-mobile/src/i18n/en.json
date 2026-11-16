@@ -251,6 +251,21 @@
     "confirmEmailSent": "Confirmation email sent. Click the link in the email to finish registration.",
     "completed": "Registration complete. You can sign in with this email and password from now on."
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "modeNormal": "Easy mode",
+    "modePro": "Pro mode",
+    "hint": "Play at least {minimumGames} matches in a mode, each started by four players, to be listed for that mode. A match you leave without returning to your starting team counts as a loss. Only matches after launch count.",
+    "loading": "Loading leaderboard…",
+    "error": "Could not load the leaderboard",
+    "empty": "No players qualify yet",
+    "record": "{wins} wins / {games} matches",
+    "myRank": "Your rank: {rank} ({wins} wins / {games} matches)",
+    "guestNote": "Guest results are saved. Register your account to appear after {minimumGames} matches.",
+    "guestProgress": "Eligible matches: {games}. Play {remaining} more and register to appear.",
+    "progress": "Your eligible matches: {games}. {remaining} more to qualify.",
+    "unlisted": "Eligible matches: {games}. You meet the requirement but are not listed right now."
+  },
   "rooms": {
     "loadingAccount": "Loading your account",
     "defaultRoomName": "{name}'s room",
@@ -438,6 +453,7 @@
     "viewDetails": "View details",
     "gameHistory": "Game history",
     "historyMenuHint": "Review past games, rounds, and hands",
+    "leaderboardHint": "Compare win rates against other players by mode",
     "profile": "Profile",
     "editProfile": "Edit profile",
     "profileEditHint": "Change the name and image shown during games.",

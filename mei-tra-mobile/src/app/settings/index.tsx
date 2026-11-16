@@ -90,6 +90,11 @@ export default function SettingsScreen() {
           onPress={() => router.push('/game-history')}
         />
         <SettingsLinkRow
+          description={t('settings.leaderboardHint')}
+          label={t('leaderboard.title')}
+          onPress={() => router.push('/leaderboard')}
+        />
+        <SettingsLinkRow
           description={t('settings.preferencesHint')}
           label={t('settings.preferences')}
           onPress={() => router.push('/settings/preferences')}

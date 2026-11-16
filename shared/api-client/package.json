@@ -7,6 +7,10 @@
     "@meitra/contracts": "file:../../contracts"
   },
   "exports": {
+    "./leaderboard": {
+      "types": "./leaderboard.ts",
+      "default": "./leaderboard.ts"
+    },
     "./profile": {
       "types": "./profile.ts",
       "default": "./profile.ts"

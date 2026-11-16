@@ -55,6 +55,10 @@
       "types": "./drag-action.ts",
       "default": "./drag-action.ts"
     },
+    "./leaderboard-standing": {
+      "types": "./leaderboard-standing.ts",
+      "default": "./leaderboard-standing.ts"
+    },
     "./pending-hand-card": {
       "types": "./pending-hand-card.ts",
       "default": "./pending-hand-card.ts"

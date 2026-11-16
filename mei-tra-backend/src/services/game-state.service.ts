@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   GameState,
   DomainPlayer,
@@ -26,7 +27,7 @@ import {
 } from '../adapters/player-adapters';
 import { RoomPlayer } from '../types/room.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
-import { asSeatId } from '../types/identity.types';
+import { asRankingMatchId, asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import {
   resolveCurrentPlayer,
@@ -69,6 +70,7 @@ export class GameStateService implements IGameStateService {
   private initializeState(pointsToWin: number = 10): void {
     this.state = {
       version: 0,
+      rankingMatchId: null,
       identitySchemaVersion: 2,
       players: [],
       deck: [],
@@ -535,6 +537,7 @@ export class GameStateService implements IGameStateService {
   resetRoundState(): void {
     // Keep the current players, scores, and game settings
     const version = this.state.version;
+    const rankingMatchId = this.state.rankingMatchId;
     const players = [...this.state.players];
     const teamScores = { ...this.state.teamScores };
     const teamScoreRecords = { ...this.state.teamScoreRecords };
@@ -545,6 +548,7 @@ export class GameStateService implements IGameStateService {
 
     // Restore players and scores
     this.state.version = version;
+    this.state.rankingMatchId = rankingMatchId;
     this.state.players = players;
     this.state.teamScores = teamScores;
     this.state.teamScoreRecords = teamScoreRecords;
@@ -569,6 +573,8 @@ export class GameStateService implements IGameStateService {
   startGame(): void {
     this.transitionPhase('blow');
     let state = this.getState();
+    // The database takes this match's participants when this ID is first saved.
+    state.rankingMatchId = asRankingMatchId(randomUUID());
     state.gameOver = null;
 
     // Initialize game state

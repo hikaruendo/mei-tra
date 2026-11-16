@@ -21,7 +21,7 @@ import {
 } from '../../adapters/player-adapters';
 import type { Database } from '../../types/database.generated.types';
 import { RoomPlayer } from '../../types/room.types';
-import { asSeatId } from '../../types/identity.types';
+import { asRankingMatchId, asSeatId } from '../../types/identity.types';
 import type { SeatId } from '../../types/identity.types';
 import { normalizeGameStateIdentity } from '../../adapters/game-state-identity';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
@@ -99,6 +99,7 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
           room_id: roomId,
           state_data: toJsonObject({
             identitySchemaVersion: 2,
+            rankingMatchId: canonicalGameState.rankingMatchId ?? null,
             playerStates: toPersistedPlayerStates(canonicalGameState.players),
             deck: canonicalGameState.deck,
             agari: canonicalGameState.agari,
@@ -265,6 +266,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     const patch: Record<string, unknown> = {};
 
     patch.identitySchemaVersion = 2;
+
+    if (gameState.rankingMatchId !== undefined) {
+      patch.rankingMatchId = gameState.rankingMatchId;
+    }
 
     if (gameState.players) {
       patch.playerStates = toPersistedPlayerStates(gameState.players);
@@ -615,6 +620,10 @@ export class SupabaseGameStateRepository implements IGameStateRepository {
     return normalizeGameStateIdentity({
       version: dbGameState.version,
       identitySchemaVersion: 2,
+      rankingMatchId:
+        typeof stateData.rankingMatchId === 'string'
+          ? asRankingMatchId(stateData.rankingMatchId)
+          : null,
       players,
       currentSeatId: canonicalCurrentSeatId
         ? asSeatId(canonicalCurrentSeatId)

@@ -488,6 +488,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      ranked_match_participants: {
+        Row: {
+          forfeited: boolean;
+          match_id: string;
+          team: number;
+          user_id: string;
+        };
+        Insert: {
+          forfeited?: boolean;
+          match_id: string;
+          team: number;
+          user_id: string;
+        };
+        Update: {
+          forfeited?: boolean;
+          match_id?: string;
+          team?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ranked_match_participants_match_id_fkey';
+            columns: ['match_id'];
+            isOneToOne: false;
+            referencedRelation: 'ranked_matches';
+            referencedColumns: ['match_id'];
+          },
+        ];
+      };
+      ranked_matches: {
+        Row: {
+          completed_at: string | null;
+          match_id: string;
+          mode: string;
+          started_at: string;
+          winning_team: number | null;
+        };
+        Insert: {
+          completed_at?: string | null;
+          match_id: string;
+          mode: string;
+          started_at?: string;
+          winning_team?: number | null;
+        };
+        Update: {
+          completed_at?: string | null;
+          match_id?: string;
+          mode?: string;
+          started_at?: string;
+          winning_team?: number | null;
+        };
+        Relationships: [];
+      };
       room_membership_events: {
         Row: {
           created_at: string;
@@ -784,6 +837,10 @@ export type Database = {
           p_transition_id: string;
           p_user_id: string;
         };
+        Returns: Json;
+      };
+      get_win_rate_leaderboard: {
+        Args: { p_mode: string; p_viewer_id: string };
         Returns: Json;
       };
       load_room_game_state: { Args: { p_room_id: string }; Returns: Json };

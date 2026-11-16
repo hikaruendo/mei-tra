@@ -175,7 +175,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
   const unavailableDuringGameMessage = t('unavailableDuringGame');
 
   const renderGameSafeLink = (
-    href: '/' | '/rooms' | '/docs',
+    href: '/' | '/rooms' | '/leaderboard' | '/docs',
     className: string,
     children: ReactNode,
     onClick?: () => void,
@@ -220,6 +220,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
           <div className={styles.desktopMenu}>
             <div className={styles.primaryNav}>
               {renderGameSafeLink('/rooms', styles.navLink, t('rooms'))}
+              {renderGameSafeLink('/leaderboard', styles.navLink, t('leaderboard'))}
               {renderGameSafeLink('/docs', styles.navLink, t('tutorial'))}
             </div>
 
@@ -405,6 +406,7 @@ export function Navigation({ gameStarted = false, inRoom = false }: NavigationPr
       <div className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.open : ''}`}>
         <div className={styles.mobileMenuContent}>
           {renderGameSafeLink('/rooms', styles.mobileNavLink, t('rooms'), closeMobileMenu)}
+          {renderGameSafeLink('/leaderboard', styles.mobileNavLink, t('leaderboard'), closeMobileMenu)}
           {renderGameSafeLink('/docs', styles.mobileNavLink, t('tutorial'), closeMobileMenu)}
           <div className={styles.mobileExternalSection} aria-label={t('community')}>
             <span className={styles.mobileSectionLabel}>{t('community')}</span>

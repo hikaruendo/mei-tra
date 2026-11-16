@@ -55,6 +55,7 @@ import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { GameEventLogService } from './services/game-event-log.service';
 import { GameHistoryMembershipLogService } from './services/game-history-membership-log.service';
 import { GameHistoryController } from './controllers/game-history.controller';
+import { LeaderboardController } from './controllers/leaderboard.controller';
 import { GetGameHistoryUseCase } from './use-cases/get-game-history.use-case';
 import { GetUserRecentGameHistoryUseCase } from './use-cases/get-user-recent-game-history.use-case';
 import { ComAutoPlayRecoveryService } from './services/com-autoplay-recovery.service';
@@ -68,7 +69,7 @@ import { RoomGameActionQueueService } from './services/room-game-action-queue.se
 
 @Module({
   imports: [DatabaseModule, RepositoriesModule, AuthModule, SocialModule],
-  controllers: [GameHistoryController],
+  controllers: [GameHistoryController, LeaderboardController],
   providers: [
     GameGateway,
     ConfirmRoundResultsUseCase,

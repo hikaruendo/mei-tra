@@ -4,19 +4,7 @@ import type {
   UserProfileDto,
 } from '@contracts/profile';
 import { getBackendApiUrl } from '@/lib/backend-api';
-
-async function proxyResponse<T>(response: Response): Promise<NextResponse<T>> {
-  const contentType =
-    response.headers.get('content-type') ?? 'application/json; charset=utf-8';
-  const body = await response.text();
-
-  return new NextResponse(body, {
-    status: response.status,
-    headers: {
-      'content-type': contentType,
-    },
-  });
-}
+import { proxyBackendResponse } from '@/lib/api/proxy-backend-response';
 
 export async function GET(
   _request: NextRequest,
@@ -28,7 +16,7 @@ export async function GET(
     cache: 'no-store',
   });
 
-  return proxyResponse<UserProfileDto>(response);
+  return proxyBackendResponse<UserProfileDto>(response);
 }
 
 export async function PUT(
@@ -55,5 +43,5 @@ export async function PUT(
     body: JSON.stringify(body),
   });
 
-  return proxyResponse<UserProfileDto>(response);
+  return proxyBackendResponse<UserProfileDto>(response);
 }
