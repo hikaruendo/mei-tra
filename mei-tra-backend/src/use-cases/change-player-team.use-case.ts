@@ -26,13 +26,10 @@ export class ChangePlayerTeamUseCase implements IChangePlayerTeamUseCase {
         return { success: false, error: 'Room not found' };
       }
 
-      if (
-        room.status !== RoomStatus.WAITING &&
-        room.status !== RoomStatus.READY
-      ) {
+      if (room.status !== RoomStatus.WAITING) {
         return {
           success: false,
-          error: 'Teams can only be changed before the game starts',
+          error: 'Teams can only be changed while waiting',
         };
       }
 
