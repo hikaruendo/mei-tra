@@ -1300,7 +1300,6 @@ export function GameProvider({ children }: PropsWithChildren) {
       const response = await emitAck('create-room', {
         name: name.trim(),
         pointsToWin,
-        teamAssignmentMethod: 'random',
         gameMode,
       });
       if (!response.success || !response.room) {
