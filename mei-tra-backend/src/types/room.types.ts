@@ -1,6 +1,9 @@
+import type { GameMode } from '@contracts/room';
 import { PlayerGameplayState, TeamNames } from './game.types';
 import type { SeatId } from './identity.types';
 import { SessionUser } from './session.types';
+
+export { isGameMode } from '@contracts/room';
 
 export enum RoomStatus {
   WAITING = 'waiting',
@@ -10,7 +13,7 @@ export enum RoomStatus {
   ABANDONED = 'abandoned',
 }
 
-export type GameMode = 'normal' | 'pro';
+export type { GameMode };
 
 export interface RoomPlayer extends SessionUser, PlayerGameplayState {
   seatId: SeatId;
@@ -37,7 +40,6 @@ export interface RoomSettings {
   maxPlayers: number;
   isPrivate: boolean;
   password: string | null;
-  teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
   gameMode?: GameMode;

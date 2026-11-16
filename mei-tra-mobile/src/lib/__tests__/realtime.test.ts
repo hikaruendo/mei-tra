@@ -33,7 +33,6 @@ describe('emitWithAck', () => {
         {
           name: 'test-room',
           pointsToWin: 5,
-          teamAssignmentMethod: 'random',
         },
       ),
     ).resolves.toEqual({ success: true });
@@ -63,7 +62,6 @@ describe('emitWithAck', () => {
         {
           name: 'test-room',
           pointsToWin: 5,
-          teamAssignmentMethod: 'random',
         },
         1000,
       ),

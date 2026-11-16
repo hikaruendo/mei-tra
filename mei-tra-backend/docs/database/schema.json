@@ -1662,7 +1662,7 @@
           "name": "settings",
           "type": "jsonb",
           "nullable": false,
-          "default": "'{\"password\": null, \"isPrivate\": false, \"maxPlayers\": 4, \"pointsToWin\": 10, \"allowSpectators\": true, \"teamAssignmentMethod\": \"random\"}'::jsonb"
+          "default": "'{\"password\": null, \"isPrivate\": false, \"maxPlayers\": 4, \"pointsToWin\": 10, \"allowSpectators\": true}'::jsonb"
         },
         {
           "name": "status",
@@ -2544,13 +2544,6 @@
         "playing",
         "ready",
         "waiting"
-      ]
-    },
-    {
-      "name": "public.team_assignment_method",
-      "values": [
-        "host-choice",
-        "random"
       ]
     },
     {

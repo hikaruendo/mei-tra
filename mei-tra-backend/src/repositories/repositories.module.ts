@@ -8,6 +8,7 @@ import { SupabaseChatMessageRepository } from './implementations/supabase-chat-m
 import { SupabaseChatModerationRepository } from './implementations/supabase-chat-moderation.repository';
 import { SupabaseGameHistoryRepository } from './implementations/supabase-game-history.repository';
 import { SupabaseRoomMembershipRepository } from './implementations/supabase-room-membership.repository';
+import { SupabaseLeaderboardRepository } from './implementations/supabase-leaderboard.repository';
 import { SupabaseService } from '../database/supabase.service';
 
 @Module({
@@ -50,6 +51,10 @@ import { SupabaseService } from '../database/supabase.service';
       provide: 'IRoomMembershipRepository',
       useClass: SupabaseRoomMembershipRepository,
     },
+    {
+      provide: 'ILeaderboardRepository',
+      useClass: SupabaseLeaderboardRepository,
+    },
   ],
   exports: [
     'SUPABASE_CLIENT',
@@ -61,6 +66,7 @@ import { SupabaseService } from '../database/supabase.service';
     'IChatModerationRepository',
     'IGameHistoryRepository',
     'IRoomMembershipRepository',
+    'ILeaderboardRepository',
   ],
 })
 export class RepositoriesModule {}

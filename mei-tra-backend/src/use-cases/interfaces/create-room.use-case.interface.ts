@@ -1,12 +1,11 @@
 import { AuthenticatedUser } from '../../types/user.types';
-import { Room } from '../../types/room.types';
+import { GameMode, Room } from '../../types/room.types';
 import { RoomPlayer } from '../../types/room.types';
 
 export interface CreateRoomRequest {
   roomName: string;
   pointsToWin: number;
-  teamAssignmentMethod: 'random' | 'host-choice';
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
   playerName?: string;
   socketId: string;
   authenticatedUser?: AuthenticatedUser | null;

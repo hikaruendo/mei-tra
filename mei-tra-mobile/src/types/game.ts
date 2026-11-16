@@ -10,7 +10,7 @@ import type {
   TransportTeamScores,
 } from '@meitra/contracts/game';
 import type { SeatId } from '@meitra/contracts/ids';
-import type { RoomContract } from '@meitra/contracts/room';
+import type { GameMode, RoomContract } from '@meitra/contracts/room';
 
 export type MobilePlayer = PlayerContract;
 export type MobileRoom = RoomContract;
@@ -36,7 +36,7 @@ export interface MobileGameSnapshot {
   fields: CompletedFieldContract[];
   hostSeatId: SeatId | null;
   pointsToWin: number;
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
   paused: boolean;
   disconnectedSeatIds: string[];
   idleSeatIds: string[];

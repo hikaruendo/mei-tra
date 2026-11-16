@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import type { MobileGameSnapshot } from '@/types/game';
+import type { GameMode } from '@meitra/contracts/room';
 import { asSeatId } from '@meitra/contracts/ids';
 import React from 'react';
 import { AccessibilityInfo, Alert, Platform, StyleSheet, Text } from 'react-native';
@@ -1096,7 +1097,7 @@ describe('GameBoard chombo sheet', () => {
 
 describe('GameBoard broken hand action', () => {
   const renderBlowBoard = (
-    gameMode: 'normal' | 'pro',
+    gameMode: GameMode,
     onRevealBrokenHand: jest.Mock,
     selfFlags: {
       hasBroken?: boolean;

@@ -37,7 +37,6 @@ it('resolves a successful create acknowledgement with the new room', async () =>
       maxPlayers: 4,
       isPrivate: false,
       password: null,
-      teamAssignmentMethod: 'random',
       pointsToWin: 5,
       allowSpectators: true,
       gameMode: 'pro',
@@ -52,12 +51,12 @@ it('resolves a successful create acknowledgement with the new room', async () =>
   const { result } = renderHook(() => useRoom());
 
   let created = false;
-  await act(async () => { created = await result.current.createRoom('Test room', 5, 'random', 'pro'); });
+  await act(async () => { created = await result.current.createRoom('Test room', 5, 'pro'); });
 
   expect(created).toBe(true);
   expect(mockSocket.timeout).toHaveBeenCalledWith(15_000);
   expect(mockSocket.emit).toHaveBeenCalledWith('create-room', {
-    name: 'Test room', pointsToWin: 5, teamAssignmentMethod: 'random', gameMode: 'pro',
+    name: 'Test room', pointsToWin: 5, gameMode: 'pro',
   }, expect.any(Function));
   expect(result.current.currentRoom?.id).toBe('room-1');
 });
@@ -69,7 +68,7 @@ it('releases the create action after an acknowledgement timeout', async () => {
   const { result } = renderHook(() => useRoom());
 
   let created = true;
-  await act(async () => { created = await result.current.createRoom('Test room', 5, 'random'); });
+  await act(async () => { created = await result.current.createRoom('Test room', 5); });
 
   expect(created).toBe(false);
   expect(result.current.error).toBe('Room creation timed out');

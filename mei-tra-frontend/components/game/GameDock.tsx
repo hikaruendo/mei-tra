@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { DevChomboScenarioType } from '@contracts/game';
+import type { GameMode } from '@contracts/room';
 import type { Player, TeamNames, TrumpType } from '@/types/game.types';
 import { ChatDock } from '@/components/social/ChatDock';
 import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
@@ -14,7 +15,7 @@ interface GameDockProps {
   roomId: string;
   gameStarted: boolean;
   currentTrump: TrumpType | null;
-  gameMode: 'normal' | 'pro';
+  gameMode: GameMode;
   gamePhase?: string | null;
   players?: Player[];
   teamNames?: TeamNames;

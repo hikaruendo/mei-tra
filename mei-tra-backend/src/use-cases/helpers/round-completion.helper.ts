@@ -282,6 +282,9 @@ function applyPlayPoints(
   return playPoints;
 }
 
+/** How long a COM host leaves the round results up before confirming them. */
+export const COM_HOST_ROUND_CONFIRM_DELAY_MS = 5000;
+
 export async function startNextRound(
   roomId: string,
   roomGameState: GameStateService,

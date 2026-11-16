@@ -367,7 +367,6 @@ describe('Reconnection Token Management', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
         pointsToWin: 10,
         allowSpectators: true,
       },
@@ -719,7 +718,7 @@ describe('Reconnection Token Management', () => {
         );
       });
 
-      it('stops the replaced player from acting for or reconnecting to the COM seat', async () => {
+      it('stops the replaced player from acting for or reconnecting to the COM seat while others play on', async () => {
         const roomId = 'room-idle';
         const seatId = asSeatId('player-1');
         bindRoomRepositoryToState({
@@ -733,11 +732,19 @@ describe('Reconnection Token Management', () => {
               isAuthenticated: true,
               isHost: true,
             }),
+            makeRoomPlayer('player-2', 'Still Playing', 1, {
+              socketId: 'socket-2-live',
+              userId: 'user-2',
+              isAuthenticated: true,
+            }),
           ],
         });
         const gameState = await roomService.getRoomGameState(roomId);
         gameState.getState().players = [
           makeGamePlayer(seatId, 'Idle Player', 0, { hand: ['H2'] }),
+          makeGamePlayer(asSeatId('player-2'), 'Still Playing', 1, {
+            hand: ['H3'],
+          }),
         ];
         gameState.getState().gamePhase = 'play';
         gameState.registerSeatToken(seatId, seatId);
@@ -2470,6 +2477,339 @@ describe('Reconnection Token Management', () => {
         (roomService as unknown as { vacantSeats: Record<string, unknown> })
           .vacantSeats[roomId],
       ).toBeUndefined();
+    });
+
+    // Round results only advance on the host's confirmation, so the host must
+    // stay on a seat a person can press the button from.
+    describe('host handoff', () => {
+      const roomId = 'room-host-handoff';
+
+      const seatedTable = (hostSeatId: string, players: RoomPlayer[]) =>
+        bindRoomRepositoryToState({
+          ...baseRoom,
+          id: roomId,
+          hostSeatId: asSeatId(hostSeatId),
+          status: RoomStatus.PLAYING,
+          players,
+        });
+
+      const seatGamePlayers = async (players: RoomPlayer[]) => {
+        const gameState = await roomService.getRoomGameState(roomId);
+        gameState.getState().gamePhase = 'round-end';
+        gameState.getState().players = players.map((player) =>
+          makeGamePlayer(player.seatId, player.name, player.team, {
+            isCOM: player.isCOM,
+          }),
+        );
+        return gameState;
+      };
+
+      const connect = (
+        gameState: Awaited<ReturnType<RoomService['getRoomGameState']>>,
+        seatId: string,
+      ) =>
+        gameState.applyPlayerConnectionState(asSeatId(seatId), {
+          socketId: `socket-${seatId}`,
+          userId: `user-${seatId}`,
+          isAuthenticated: true,
+        });
+
+      it('hands the host to a connected human when the host leaves mid-game', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('offline', 'Offline', 1, { userId: 'user-offline' }),
+          makeRoomPlayer('online', 'Online', 0, { userId: 'user-online' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('host', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'host');
+        connect(gameState, 'online');
+
+        await roomService.leaveRoom(roomId, asSeatId('host'));
+
+        // 'offline' is first among the humans but could never press the button.
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('online');
+      });
+
+      it('hands the host on when the host seat times out to COM', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('online', 'Online', 1, { userId: 'user-online' }),
+        ];
+        const table = seatedTable('host', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'online');
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('host'));
+
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('online');
+      });
+
+      it('leaves the host on the COM seat when no human is left', async () => {
+        const players = [
+          makeRoomPlayer('host', 'Host', 0, { userId: 'user-host' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('host', players);
+        await seatGamePlayers(players);
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('host'));
+
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('host');
+        expect(table.getPersistedRoom()?.players[0].isCOM).toBe(true);
+      });
+
+      it('keeps a game for the last person who leaves it, even across a restart', async () => {
+        const players = [
+          makeRoomPlayer('mine', 'Mine', 0, {
+            userId: 'user-mine',
+            isAuthenticated: true,
+            participantKey: 'user-mine',
+          }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('mine', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gamePhase = 'play';
+        connect(gameState, 'mine');
+
+        await roomService.leaveRoom(roomId, asSeatId('mine'));
+
+        expect(roomRepository.delete).not.toHaveBeenCalled();
+        const kept = table.getPersistedRoom()?.players[0];
+        expect(kept).toMatchObject({ isCOM: true, userId: 'user-mine' });
+
+        // The lobby still lists it, which is how they find their way back.
+        roomRepository.findAll.mockResolvedValue([table.getPersistedRoom()!]);
+        expect((await roomService.listRooms()).map((room) => room.id)).toEqual([
+          roomId,
+        ]);
+
+        // A restart forgets the in-memory vacant seat; the seat owner remains.
+        (
+          roomService as unknown as { vacantSeats: Record<string, unknown> }
+        ).vacantSeats = {};
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-mine-again',
+          seatId: asSeatId('stale-seat'),
+          userId: 'user-mine',
+          isAuthenticated: true,
+          name: 'Mine',
+        });
+
+        expect(joined).toBe(true);
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          seatId: 'mine',
+          isCOM: false,
+        });
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('mine');
+      });
+
+      it('lets other leavers go while someone is still playing', async () => {
+        const players = [
+          makeRoomPlayer('leaver', 'Leaver', 0, { userId: 'user-leaver' }),
+          makeRoomPlayer('stays', 'Stays', 1, { userId: 'user-stays' }),
+        ];
+        const table = seatedTable('stays', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'stays');
+
+        await roomService.leaveRoom(roomId, asSeatId('leaver'));
+
+        // Someone else can take the seat, as before.
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          isCOM: true,
+        });
+        expect(table.getPersistedRoom()?.players[0].userId).toBeFalsy();
+      });
+
+      it('still deletes a finished game when the last person leaves', async () => {
+        const players = [
+          makeRoomPlayer('mine', 'Mine', 0, { userId: 'user-mine' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        seatedTable('mine', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gameOver = {
+          winner: 'Team 0',
+          winningTeam: 0,
+          finalScores: gameState.getState().teamScores,
+        };
+
+        await roomService.leaveRoom(roomId, asSeatId('mine'));
+
+        expect(roomRepository.delete).toHaveBeenCalledWith(roomId);
+      });
+
+      it('keeps the seat for the last person when COM takes over an idle turn', async () => {
+        const players = [
+          makeRoomPlayer('mine', 'Mine', 0, {
+            userId: 'user-mine',
+            isAuthenticated: true,
+            participantKey: 'user-mine',
+          }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('mine', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gamePhase = 'play';
+        connect(gameState, 'mine');
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('mine'));
+
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          isCOM: true,
+          userId: 'user-mine',
+          participantKey: 'user-mine',
+        });
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-mine-again',
+          seatId: asSeatId('stale-seat'),
+          userId: 'user-mine',
+          isAuthenticated: true,
+          name: 'Mine',
+        });
+
+        expect(joined).toBe(true);
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          seatId: 'mine',
+          isCOM: false,
+        });
+      });
+
+      it('frees an idle seat for others while someone is still playing', async () => {
+        const players = [
+          makeRoomPlayer('idle', 'Idle', 0, { userId: 'user-idle' }),
+          makeRoomPlayer('stays', 'Stays', 1, { userId: 'user-stays' }),
+        ];
+        const table = seatedTable('stays', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gamePhase = 'play';
+        connect(gameState, 'idle');
+        connect(gameState, 'stays');
+
+        await roomService.convertPlayerToCOM(roomId, asSeatId('idle'));
+
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          isCOM: true,
+        });
+        expect(table.getPersistedRoom()?.players[0].userId).toBeFalsy();
+      });
+
+      it('gives the host to the first human who reclaims a seat while COM holds it', async () => {
+        const players = [
+          makeRoomPlayer('host', 'COM', 0, { isCOM: true }),
+          makeRoomPlayer('returning', 'COM', 1, {
+            isCOM: true,
+            userId: 'user-returning',
+            isAuthenticated: true,
+            participantKey: 'user-returning',
+          }),
+        ];
+        const table = seatedTable('host', players);
+        await seatGamePlayers(players);
+        (
+          roomService as unknown as { vacantSeats: Record<string, unknown> }
+        ).vacantSeats[roomId] = {
+          returning: {
+            roomPlayer: {
+              ...table.getPersistedRoom()!.players[1],
+              name: 'Returning',
+            },
+          },
+        };
+
+        const result = await roomService.handlePlayerReconnection(
+          roomId,
+          asSeatId('returning'),
+          'socket-returning',
+          'user-returning',
+          'Returning',
+        );
+
+        expect(result).toEqual({ success: true });
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('returning');
+      });
+
+      // Both seats are COM below: the host seat has no human left, and the other
+      // is the seat somebody is taking back.
+      const comHeldTable = (reclaimed: Partial<RoomPlayer> = {}) => {
+        const players = [
+          makeRoomPlayer('host', 'COM', 0, { isCOM: true }),
+          makeRoomPlayer('mine', 'COM', 1, { isCOM: true, ...reclaimed }),
+        ];
+        return { players, table: seatedTable('host', players) };
+      };
+
+      const stashVacantSeat = (seatId: string, roomPlayer: RoomPlayer) => {
+        (
+          roomService as unknown as {
+            vacantSeats: Record<string, Record<string, unknown>>;
+          }
+        ).vacantSeats[roomId] = {
+          [seatId]: {
+            roomPlayer: { ...roomPlayer, isCOM: false },
+            gamePlayer: makeGamePlayer(
+              seatId,
+              roomPlayer.name,
+              roomPlayer.team,
+            ),
+          },
+        };
+      };
+
+      it('gives the host to a player who rejoins the seat COM kept for them', async () => {
+        const { players, table } = comHeldTable({
+          userId: 'user-mine',
+          isAuthenticated: true,
+          participantKey: 'user-mine',
+        });
+        await seatGamePlayers(players);
+        stashVacantSeat('mine', { ...players[1], name: 'Mine' });
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-mine',
+          seatId: asSeatId('stale-seat'),
+          userId: 'user-mine',
+          isAuthenticated: true,
+          name: 'Mine',
+        });
+
+        expect(joined).toBe(true);
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('mine');
+      });
+
+      it('gives the host to a newcomer who takes a COM seat', async () => {
+        const { players, table } = comHeldTable();
+        await seatGamePlayers(players);
+        stashVacantSeat('mine', { ...players[1], name: 'Previous' });
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-new',
+          seatId: asSeatId('new-player'),
+          name: 'Newcomer',
+        });
+
+        expect(joined).toBe(true);
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('mine');
+      });
+
+      it('gives the host to a player restored from a vacant seat', async () => {
+        const { players, table } = comHeldTable();
+        await seatGamePlayers(players);
+        stashVacantSeat('mine', { ...players[1], name: 'Restored' });
+
+        const restored = await roomService.restorePlayerFromVacantSeat(
+          roomId,
+          asSeatId('mine'),
+        );
+
+        expect(restored).toBe(true);
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('mine');
+      });
     });
 
     describe('restorePlayerFromVacantSeat', () => {

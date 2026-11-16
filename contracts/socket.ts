@@ -35,6 +35,7 @@ import type {
   UpdateTurnPayload,
 } from './game';
 import type {
+  GameMode,
   GamePlayerJoinedPayload,
   RoomContract,
   RoomPlayerJoinedPayload,
@@ -54,8 +55,7 @@ export interface RoomAck extends GatewayAck {
 export interface CreateRoomPayload {
   name: string;
   pointsToWin: number;
-  teamAssignmentMethod: 'random' | 'host-choice';
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
 }
 
 export interface JoinRoomPayload {

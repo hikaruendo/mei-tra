@@ -4,6 +4,7 @@ import type {
   PlayerLeftPayload,
 } from '@contracts/game';
 import type {
+  GameMode,
   RoomContract,
   RoomPlayerJoinedPayload,
   RoomSyncPayload,
@@ -388,7 +389,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
   ]);
 
   // ルーム作成
-  const createRoom = useCallback((name: string, pointsToWin: number, teamAssignmentMethod: 'random' | 'host-choice', gameMode: 'normal' | 'pro' = 'normal'): Promise<boolean> => {
+  const createRoom = useCallback((name: string, pointsToWin: number, gameMode: GameMode = 'normal'): Promise<boolean> => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -412,7 +413,6 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     console.log('[useRoom] Creating room:', {
       name: trimmedName,
       pointsToWin,
-      teamAssignmentMethod,
       socketConnected: socket.connected,
       socketId: socket.id,
       storedRoomId:
@@ -424,7 +424,7 @@ export const useRoom = (options: UseRoomOptions = {}) => {
     return new Promise((resolve) => {
       socket.timeout(15_000).emit(
         'create-room',
-        { name: trimmedName, pointsToWin, teamAssignmentMethod, gameMode },
+        { name: trimmedName, pointsToWin, gameMode },
         (ackError: Error | null, response?: { success: boolean; room?: RoomContract; error?: string }) => {
           if (ackError || !response) {
             setError('Room creation timed out');

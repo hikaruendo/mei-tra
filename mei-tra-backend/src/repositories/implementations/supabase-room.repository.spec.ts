@@ -21,7 +21,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random' as const,
         pointsToWin: 7,
         allowSpectators: true,
       },
@@ -69,7 +68,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
         pointsToWin: 8,
         allowSpectators: true,
       },
@@ -155,7 +153,6 @@ describe('SupabaseRoomRepository', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random' as const,
         pointsToWin: 8,
         allowSpectators: true,
       },
@@ -264,6 +261,60 @@ describe('SupabaseRoomRepository', () => {
       'room-1-player-1',
       'room-1-player-2',
     ]);
+  });
+
+  it.each([
+    ['without teamAssignmentMethod', {}],
+    [
+      'with the legacy teamAssignmentMethod',
+      { teamAssignmentMethod: 'random' },
+    ],
+  ])('reads stored room settings %s', async (_label, extraSettings) => {
+    const row = createRoomRow(
+      'room-1',
+      'Stored room',
+      '2026-04-16T00:00:00.000Z',
+      'room-1-player-1',
+    );
+    const storedSettings = { ...row.settings, ...extraSettings };
+
+    const roomSingle = jest.fn().mockResolvedValue({
+      data: { ...row, settings: storedSettings },
+      error: null,
+    });
+    const roomEq = jest.fn().mockReturnValue({ single: roomSingle });
+    const roomsSelect = jest.fn().mockReturnValue({ eq: roomEq });
+
+    const playerOrderBySeatIndex = jest
+      .fn()
+      .mockResolvedValue({ data: [], error: null });
+    const playerOrderByRoomId = jest.fn().mockReturnValue({
+      order: playerOrderBySeatIndex,
+    });
+    const playerIn = jest.fn().mockReturnValue({ order: playerOrderByRoomId });
+    const playersSelect = jest.fn().mockReturnValue({ in: playerIn });
+
+    const from = jest.fn((table: string) => {
+      if (table === 'rooms') {
+        return { select: roomsSelect };
+      }
+
+      if (table === 'room_players') {
+        return { select: playersSelect };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const supabaseService = {
+      client: { from },
+    } as unknown as SupabaseService;
+
+    const repository = new SupabaseRoomRepository(supabaseService);
+
+    const room = await repository.findById('room-1');
+
+    expect(room?.settings).toEqual({ ...storedSettings, gameMode: 'normal' });
   });
 
   it('queries recent finished rooms by user ordered by last activity', async () => {

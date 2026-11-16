@@ -1,4 +1,4 @@
-import type { SeatId } from './identity.types';
+import type { RankingMatchId, SeatId } from './identity.types';
 
 export type Team = 0 | 1;
 
@@ -161,6 +161,7 @@ export type GamePhase =
 export interface GameState {
   version?: number;
   identitySchemaVersion?: 2;
+  rankingMatchId?: RankingMatchId | null;
   players: DomainPlayer[];
   currentSeatId?: SeatId | null;
   gamePhase: GamePhase;

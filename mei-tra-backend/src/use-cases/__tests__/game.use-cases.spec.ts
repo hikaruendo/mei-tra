@@ -171,7 +171,6 @@ describe('Game Use Cases', () => {
       maxPlayers: 4,
       isPrivate: false,
       password: null,
-      teamAssignmentMethod: 'random' as const,
       pointsToWin: 30,
       allowSpectators: true,
     },
@@ -353,7 +352,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         roomName: 'Room',
         pointsToWin: 30,
-        teamAssignmentMethod: 'random',
         socketId: 'socket-1',
         authenticatedUser: { id: 'user-1' } as any,
       });
@@ -388,7 +386,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         roomName: 'Room',
         pointsToWin: 30,
-        teamAssignmentMethod: 'random',
         playerName: 'Host',
         socketId: 'socket-1',
         authenticatedUser: { id: 'player-1' } as any,
@@ -405,7 +402,7 @@ describe('Game Use Cases', () => {
           socketId: 'socket-1',
         }),
         30,
-        'random',
+        undefined,
       );
       expect(roomService.joinRoom).toHaveBeenCalled();
     });
@@ -1399,6 +1396,29 @@ describe('Game Use Cases', () => {
   });
 
   describe('ChangePlayerTeamUseCase', () => {
+    it.each([
+      RoomStatus.READY,
+      RoomStatus.PLAYING,
+      RoomStatus.FINISHED,
+      RoomStatus.ABANDONED,
+    ])('rejects team changes once the room is %s', async (status) => {
+      const roomService = createRoomServiceMock();
+      const useCase = new ChangePlayerTeamUseCase(roomService);
+      roomService.getRoom.mockResolvedValue({ ...baseRoom, status });
+
+      const result = await useCase.execute({
+        roomId: baseRoom.id,
+        actorSeatId: asSeatId('player-1'),
+        teamChanges: { 'player-1': 1, 'player-2': 0 },
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Teams can only be changed while waiting',
+      });
+      expect(roomService.updatePlayersInRoom).not.toHaveBeenCalled();
+    });
+
     it('rejects team change when exceeding max members', async () => {
       const roomService = createRoomServiceMock();
       const useCase = new ChangePlayerTeamUseCase(roomService);

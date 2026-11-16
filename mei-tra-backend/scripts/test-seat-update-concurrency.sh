@@ -62,7 +62,6 @@ select public.create_room_with_host_seat_atomic(
     "maxPlayers":4,
     "isPrivate":false,
     "password":null,
-    "teamAssignmentMethod":"random",
     "pointsToWin":10,
     "allowSpectators":true
   }'::jsonb,

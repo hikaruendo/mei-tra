@@ -16,6 +16,7 @@ import {
   setCurrentSeat,
 } from '../domain/current-turn';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import { returnHostToHuman } from '../domain/host-election';
 
 interface JoinRoomParams {
   roomId: string;
@@ -89,6 +90,9 @@ export class RoomJoinService {
         userId: updatedPlayer.userId,
         isAuthenticated: updatedPlayer.isAuthenticated,
       });
+      if (!updatedPlayer.isCOM) {
+        returnHostToHuman(room, updatedPlayer.seatId);
+      }
       await gameState.persistRoster(
         room.players,
         room.hostSeatId,
@@ -276,6 +280,7 @@ export class RoomJoinService {
       userId: player.userId,
       isAuthenticated: player.isAuthenticated,
     });
+    returnHostToHuman(room, player.seatId);
     await gameState.persistRoster(
       room.players,
       room.hostSeatId,

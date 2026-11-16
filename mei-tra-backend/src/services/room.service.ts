@@ -5,7 +5,7 @@ import {
   OnModuleDestroy,
   Optional,
 } from '@nestjs/common';
-import { Room, RoomPlayer } from '../types/room.types';
+import { GameMode, Room, RoomPlayer } from '../types/room.types';
 import { RoomStatus } from '../types/room.types';
 import { GameStateService } from './game-state.service';
 import { GameStateFactory } from './game-state.factory';
@@ -28,6 +28,12 @@ import {
 import { randomUUID } from 'crypto';
 import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import { electHost, returnHostToHuman } from '../domain/host-election';
+import {
+  holdSeatFor,
+  isLastPersonAtTable,
+  ownsSeat,
+} from '../domain/absent-owner';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -38,7 +44,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   // 退出席情報（ルームIDごとに不変の席UUIDをキーとして保存）
   private vacantSeats: VacantSeats = {};
 
-  private readonly ROOM_EXPIRY_TIME = 6 * 60 * 60 * 1000; // 6時間
+  private readonly ROOM_EXPIRY_TIME = 48 * 60 * 60 * 1000; // 48時間
   private readonly FINISHED_ROOM_RETENTION_TIME = 30 * 24 * 60 * 60 * 1000; // 30日
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分
   private cleanupIntervalId: ReturnType<typeof setInterval>;
@@ -168,15 +174,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           room.status !== RoomStatus.FINISHED &&
           room.status !== RoomStatus.ABANDONED,
       )
-      .filter((room) => room.players.some((player) => !player.isCOM));
+      .filter((room) => room.players.some(ownsSeat));
   }
 
   async createNewRoom(
     name: string,
     hostUser: SessionUser,
     pointsToWin: number,
-    teamAssignmentMethod: 'random' | 'host-choice',
-    gameMode: 'normal' | 'pro' = 'normal',
+    gameMode: GameMode = 'normal',
   ): Promise<Room> {
     if (!hostUser.userId) {
       throw new Error('Authenticated host user is required');
@@ -206,7 +211,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod,
         pointsToWin,
         allowSpectators: true,
         gameMode,
@@ -422,6 +426,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       room.status === RoomStatus.PLAYING ||
       gameState.getState().gamePhase !== null;
 
+    const isGameInProgress =
+      isGameStarted &&
+      room.status !== RoomStatus.FINISHED &&
+      !gameState.getState().gameOver;
+
     if (isGameStarted) {
       const state = gameState.getState();
 
@@ -435,10 +444,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // 席UUIDを維持したまま占有者をCOMへ切り替える。
         // uniqueIdxはsocket/participant metadataだけを識別する。
         const uniqueIdx = `left-${Date.now()}`;
+        const leavingPlayer = room.players[playerIndex];
         const comPlayer = this.createActiveCOMReplacement(
           uniqueIdx,
-          room.players[playerIndex],
+          leavingPlayer,
         );
+        if (isGameInProgress && isLastPersonAtTable(room.players, seatId)) {
+          holdSeatFor(comPlayer, leavingPlayer);
+        }
 
         const resolvedSeatId = room.players[playerIndex].seatId;
         this.vacantSeats[roomId][resolvedSeatId] = {
@@ -484,17 +497,18 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState.removeSeatToken(seatId);
     }
 
-    // If all players are COM placeholders (no human players), delete the room
-    if (room.players.every((p) => p.isCOM === true)) {
+    if (!isGameInProgress && room.players.every((p) => p.isCOM === true)) {
       await this.deleteRoom(roomId);
       return true;
     }
 
     // If host left, assign new host
     if (room.hostSeatId === seatId) {
-      const newHost = room.players.find((p) => !p.isCOM);
-      if (newHost) {
-        room.hostSeatId = asSeatId(newHost.seatId);
+      const newHostSeatId = electHost(room.players, (candidate) =>
+        Boolean(gameState.getPlayerConnectionState(candidate)?.socketId),
+      );
+      if (newHostSeatId) {
+        room.hostSeatId = newHostSeatId;
       }
     }
 
@@ -731,6 +745,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       Object.assign(roomPlayer, updates);
       if (updates.isHost === true) {
         room.hostSeatId = asSeatId(seatId);
+      } else if (updates.isCOM === false) {
+        returnHostToHuman(room, asSeatId(seatId));
       }
 
       const statePlayerIndex = state.players.findIndex(

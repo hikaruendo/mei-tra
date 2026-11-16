@@ -274,7 +274,7 @@ backend を読むとき、UseCase がどこまでやるのかを最初に決め�
 
 ここでは:
 
-- request から room name, pointsToWin, teamAssignmentMethod, playerName, authenticatedUser を受ける
+- request から room name, pointsToWin, gameMode, playerName, authenticatedUser を受ける
 - authenticated user がない場合は作成を拒否
 - `RoomService.createNewRoom()` を呼ぶ
 - host の room join と COM placeholder 初期化を続けて行う

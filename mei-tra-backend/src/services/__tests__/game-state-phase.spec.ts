@@ -34,6 +34,44 @@ describe('GameStateService phase transitions', () => {
     jest.restoreAllMocks();
   });
 
+  const seatFourPlayers = () => {
+    service.getState().players = [0, 1, 2, 3].map((index) => ({
+      seatId: asSeatId(`seat-${index}`),
+      name: `Player ${index}`,
+      team: (index % 2) as 0 | 1,
+      hand: [],
+      isPasser: false,
+      isCOM: false,
+    }));
+  };
+
+  it('creates a fresh ranking identity for each game', () => {
+    seatFourPlayers();
+    service.startGame();
+    const firstId = service.getState().rankingMatchId;
+    expect(firstId).toMatch(/^[0-9a-f-]{36}$/);
+
+    service.getState().gamePhase = 'waiting';
+    service.startGame();
+    expect(service.getState().rankingMatchId).not.toBe(firstId);
+  });
+
+  it('keeps the ranking identity through later rounds and redeals', async () => {
+    seatFourPlayers();
+    service.startGame();
+    const matchId = service.getState().rankingMatchId;
+
+    service.resetRoundState();
+    expect(service.getState().rankingMatchId).toBe(matchId);
+
+    await service.saveState();
+    expect(repository.update).toHaveBeenLastCalledWith(
+      'room-1',
+      expect.objectContaining({ rankingMatchId: matchId }),
+      expect.any(Number),
+    );
+  });
+
   it('keeps a legal transition in memory until the action is saved', async () => {
     service.transitionPhase('blow');
 

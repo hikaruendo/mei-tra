@@ -803,4 +803,205 @@ describe('GameGateway COM recovery integration', () => {
     expect(testGateway.playerRooms.has('socket-2')).toBe(false);
     expect(testGateway.playerRooms.get('socket-other')).toBe('room-2');
   });
+
+  it('tells the remaining seats who now hosts when the host leaves mid-game', async () => {
+    const gateway = createGateway();
+    const leavingSocket = {
+      id: 'socket-host',
+      data: { user: { id: 'user-host' } },
+      emit: jest.fn(),
+    } as unknown as Socket;
+    const remainingRoom = {
+      id: 'room-1',
+      hostSeatId: asSeatId('seat-p'),
+      players: [],
+    };
+    const roomSyncEvents = [
+      { scope: 'room', roomId: 'room-1', event: 'room-sync', payload: {} },
+    ];
+    const testGateway = gateway as unknown as {
+      leaveRoomUseCase: { execute: jest.Mock };
+      roomService: { getRoom: jest.Mock };
+      roomUpdateGatewayEffectsService: {
+        buildPlayersEvent: jest.Mock;
+        buildRoomEvents: jest.Mock;
+      };
+      server: { to: jest.Mock };
+      dispatchEvents: jest.Mock;
+      emitRoomsListToAll: jest.Mock;
+      queueSpectatorSnapshot: jest.Mock;
+      triggerComAutoPlayIfNeeded: jest.Mock;
+    };
+    testGateway.leaveRoomUseCase = {
+      execute: jest.fn().mockResolvedValue({
+        success: true,
+        data: {
+          seatId: asSeatId('seat-host'),
+          roomDeleted: false,
+          roomsList: [],
+          room: remainingRoom,
+          statePlayers: [],
+          updatedPlayers: [],
+        },
+      }),
+    };
+    testGateway.roomService = {
+      getRoom: jest.fn().mockResolvedValue({
+        players: [
+          { seatId: asSeatId('seat-host'), userId: 'user-host', isCOM: false },
+        ],
+      }),
+    };
+    testGateway.roomUpdateGatewayEffectsService = {
+      buildPlayersEvent: jest.fn().mockReturnValue({ event: 'update-players' }),
+      buildRoomEvents: jest.fn().mockResolvedValue(roomSyncEvents),
+    };
+    testGateway.server = { to: jest.fn().mockReturnValue({ emit: jest.fn() }) };
+    testGateway.dispatchEvents = jest.fn();
+    testGateway.emitRoomsListToAll = jest.fn();
+    testGateway.queueSpectatorSnapshot = jest.fn();
+    testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+
+    await gateway.handleLeaveRoom(leavingSocket, { roomId: 'room-1' });
+
+    // Web reads the host only from room-sync, so without it the new host never
+    // sees the button that starts the next round.
+    expect(
+      testGateway.roomUpdateGatewayEffectsService.buildRoomEvents,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        room: remainingRoom,
+        scope: 'room',
+        roomId: 'room-1',
+      }),
+    );
+    expect(testGateway.dispatchEvents).toHaveBeenCalledWith(roomSyncEvents);
+  });
+
+  describe('when a spectator opens a table', () => {
+    const watch = async (status: 'playing' | 'waiting') => {
+      const gateway = createGateway();
+      const testGateway = gateway as unknown as {
+        activityTracker: { recordActivity: jest.Mock };
+        playerRooms: Map<string, string>;
+        watchRoomUseCase: { execute: jest.Mock };
+        spectatorGatewayEffectsService: { watchRoom: jest.Mock };
+        triggerComAutoPlayIfNeeded: jest.Mock;
+      };
+      testGateway.activityTracker = { recordActivity: jest.fn() };
+      testGateway.playerRooms = new Map();
+      testGateway.watchRoomUseCase = {
+        execute: jest.fn().mockResolvedValue({
+          success: true,
+          data: {
+            room: {
+              id: 'room-1',
+              name: 'Room',
+              hostSeatId: asSeatId('host'),
+              status,
+              players: [],
+              settings: { password: null },
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              lastActivityAt: new Date(),
+            },
+            gameState: {},
+          },
+        }),
+      };
+      testGateway.spectatorGatewayEffectsService = {
+        watchRoom: jest.fn().mockResolvedValue(undefined),
+      };
+      testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+
+      const result = await gateway.handleWatchRoom(
+        { id: 'socket-watch', emit: jest.fn() } as unknown as Socket,
+        { roomId: 'room-1' },
+      );
+      return { result, trigger: testGateway.triggerComAutoPlayIfNeeded };
+    };
+
+    // A game nobody owns is driven by COM alone, and after a restart nothing
+    // wakes it until someone looks.
+    it('wakes COM for a game in progress', async () => {
+      const { result, trigger } = await watch('playing');
+
+      expect(result.success).toBe(true);
+      expect(trigger).toHaveBeenCalledWith('room-1');
+    });
+
+    it('leaves a waiting room alone', async () => {
+      const { trigger } = await watch('waiting');
+
+      expect(trigger).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when someone sits down at a table', () => {
+    const join = async (status: 'playing' | 'waiting') => {
+      const gateway = createGateway();
+      const room = { id: 'room-1', status };
+      const testGateway = gateway as unknown as {
+        activityTracker: { recordActivity: jest.Mock };
+        rejectInactiveMutatingAction: jest.Mock;
+        spectatorGatewayEffectsService: { leaveCurrentRoom: jest.Mock };
+        joinRoomUseCase: { execute: jest.Mock };
+        joinRoomGatewayEffectsService: { buildEffects: jest.Mock };
+        roomUpdateGatewayEffectsService: { buildRoomView: jest.Mock };
+        dispatchEvents: jest.Mock;
+        triggerComAutoPlayIfNeeded: jest.Mock;
+        playerRooms: Map<string, string>;
+        server: object;
+      };
+      testGateway.activityTracker = { recordActivity: jest.fn() };
+      testGateway.rejectInactiveMutatingAction = jest
+        .fn()
+        .mockResolvedValue(false);
+      testGateway.spectatorGatewayEffectsService = {
+        leaveCurrentRoom: jest.fn().mockResolvedValue(undefined),
+      };
+      testGateway.joinRoomUseCase = {
+        execute: jest.fn().mockResolvedValue({
+          success: true,
+          data: {},
+          normalizedUser: { userId: 'user-1' },
+        }),
+      };
+      testGateway.joinRoomGatewayEffectsService = {
+        buildEffects: jest.fn().mockResolvedValue({ events: [], room }),
+      };
+      testGateway.roomUpdateGatewayEffectsService = {
+        buildRoomView: jest.fn().mockResolvedValue({ room }),
+      };
+      testGateway.dispatchEvents = jest.fn();
+      testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+      testGateway.playerRooms = new Map();
+      testGateway.server = {};
+
+      const result = await gateway.handleJoinRoom(
+        {
+          id: 'socket-1',
+          data: { user: { id: 'user-1' } },
+          emit: jest.fn(),
+          join: jest.fn().mockResolvedValue(undefined),
+        } as unknown as Socket,
+        { roomId: 'room-1' },
+      );
+      return { result, trigger: testGateway.triggerComAutoPlayIfNeeded };
+    };
+
+    // A game waits while its owners are away, so coming back has to restart COM.
+    it('wakes COM for a game in progress', async () => {
+      const { result, trigger } = await join('playing');
+
+      expect(result.success).toBe(true);
+      expect(trigger).toHaveBeenCalledWith('room-1');
+    });
+
+    it('leaves a waiting room alone', async () => {
+      const { trigger } = await join('waiting');
+
+      expect(trigger).not.toHaveBeenCalled();
+    });
+  });
 });
