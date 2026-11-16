@@ -55,7 +55,6 @@ export interface RoomAck extends GatewayAck {
 export interface CreateRoomPayload {
   name: string;
   pointsToWin: number;
-  teamAssignmentMethod: 'random' | 'host-choice';
   gameMode?: GameMode;
 }
 
