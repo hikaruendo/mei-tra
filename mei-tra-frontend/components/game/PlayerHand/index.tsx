@@ -33,6 +33,7 @@ import {
   syncHandOrder,
   type HandDropSide,
 } from '@meitra/game-client/hand-order';
+import type { GameMode } from '@contracts/room';
 
 // SelectNegriUseCase closes the pro-mode Negri window once the round's fields
 // are all played.
@@ -71,7 +72,7 @@ interface PlayerHandProps {
   currentSeatId: string;
   currentField: Field | null;
   currentTrump: TrumpType | null;
-  gameMode: 'normal' | 'pro';
+  gameMode: GameMode;
   isHost?: boolean;
   isIdle?: boolean;
   isDisconnected?: boolean;

@@ -2,6 +2,7 @@ import { asSeatId } from '../../types/identity.types';
 import { createGame } from './chombo-game.fixture';
 import type { GatewayEvent } from '../interfaces/gateway-event.interface';
 import type { ChomboViolation } from '../../types/game.types';
+import type { GameMode } from '../../types/room.types';
 
 describe('Pro card play and chombo reporting', () => {
   it('does not create a chombo candidate for a COM player', async () => {
@@ -287,7 +288,7 @@ describe('How long a completed pro field stays on the table', () => {
     card: string;
     candidates?: ChomboViolation[];
     opponentsAreCOM?: boolean;
-    gameMode?: 'pro' | 'normal';
+    gameMode?: GameMode;
   }) => {
     const fixture = await createGame(winnerHand, [
       {

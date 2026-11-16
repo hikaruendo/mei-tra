@@ -1,6 +1,14 @@
 import type { PlayerContract, Team, TeamNames } from './game';
 import type { SeatId } from './ids';
 
+export const GAME_MODES = ['normal', 'pro'] as const;
+
+export type GameMode = (typeof GAME_MODES)[number];
+
+export function isGameMode(value: unknown): value is GameMode {
+  return GAME_MODES.includes(value as GameMode);
+}
+
 export type RoomStatusContract =
   | 'waiting'
   | 'ready'
@@ -21,7 +29,7 @@ export interface RoomSettingsContract {
   teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
   teamNames?: TeamNames;
 }
 

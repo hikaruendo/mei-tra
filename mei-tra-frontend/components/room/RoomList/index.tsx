@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { RoomStatus } from '@/types/room.types';
 import { ConnectionUser } from '@/types/game.types';
 import styles from './index.module.scss';
+import type { GameMode } from '@contracts/room';
 
 const getStatusText = (status: RoomStatus, t: (key: string) => string) => {
   switch (status) {
@@ -65,7 +66,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [pointsToWin, setPointsToWin] = useState(5);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-  const [activeModeTooltip, setActiveModeTooltip] = useState<'normal' | 'pro' | null>(null);
+  const [activeModeTooltip, setActiveModeTooltip] = useState<GameMode | null>(null);
   const creatingRoomRef = useRef(false);
   const { backendStatus, isLoading } = useBackendStatus();
   const effectiveIsConnected = isConnected ?? roomSocketConnected;
@@ -93,7 +94,7 @@ export const RoomList: React.FC<RoomListProps> = ({
     onRoomEntered(currentRoom.id);
   }, [currentRoom?.id, onRoomEntered]);
 
-  const handleCreateRoom = async (gameMode: 'normal' | 'pro') => {
+  const handleCreateRoom = async (gameMode: GameMode) => {
     if (disableRoomActions || creatingRoomRef.current) return;
     creatingRoomRef.current = true;
     setIsCreatingRoom(true);

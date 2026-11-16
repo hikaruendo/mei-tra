@@ -15,7 +15,7 @@ import type {
   ReportChomboPayload,
   DevChomboScenarioPayload,
 } from '@contracts/game';
-import type { UpdateTeamNamesPayload } from '@contracts/room';
+import type { GameMode, UpdateTeamNamesPayload } from '@contracts/room';
 import type {
   ChangePlayerTeamPayload,
   LeaveRoomPayload,
@@ -822,7 +822,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       name: string;
       pointsToWin: number;
       teamAssignmentMethod: 'random' | 'host-choice';
-      gameMode?: 'normal' | 'pro';
+      gameMode?: GameMode;
     },
   ) {
     this.activityTracker.recordActivity();

@@ -1,4 +1,4 @@
-import { Room, RoomPlayer, RoomStatus } from '../../types/room.types';
+import { GameMode, Room, RoomPlayer, RoomStatus } from '../../types/room.types';
 import { RosterMembershipMutation } from '../../types/room-membership.types';
 import { GameStateService } from '../game-state.service';
 import { SessionUser } from '../../types/session.types';
@@ -15,7 +15,7 @@ export interface IRoomService {
     hostUser: SessionUser,
     pointsToWin: number,
     teamAssignmentMethod: 'random' | 'host-choice',
-    gameMode?: 'normal' | 'pro',
+    gameMode?: GameMode,
   ): Promise<Room>;
   cancelRoomMembershipReservation(userId: string): Promise<boolean>;
   leaveRoom(

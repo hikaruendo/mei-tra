@@ -4,6 +4,7 @@ import { toJsonObject } from '../../database/json-value';
 import { IRoomRepository } from '../interfaces/room.repository.interface';
 import { Room, RoomStatus, RoomPlayer } from '../../types/room.types';
 import type { Database } from '../../types/database.generated.types';
+import { isGameMode } from '@contracts/room';
 import { asSeatId } from '../../types/identity.types';
 import type { GameParticipant } from '../../types/game-participant.types';
 
@@ -408,9 +409,7 @@ export class SupabaseRoomRepository implements IRoomRepository {
         value.teamAssignmentMethod === 'host-choice') &&
       typeof value.pointsToWin === 'number' &&
       typeof value.allowSpectators === 'boolean' &&
-      (value.gameMode === undefined ||
-        value.gameMode === 'normal' ||
-        value.gameMode === 'pro') &&
+      (value.gameMode === undefined || isGameMode(value.gameMode)) &&
       (value.teamNames === undefined || this.isRecord(value.teamNames))
     );
   }

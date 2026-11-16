@@ -9,12 +9,13 @@ import { ChomboScenarioPanel } from '@/components/game/ChomboScenarioPanel';
 import { GameHistoryDock } from '@/components/game/GameHistoryDock';
 import { StrengthOrderDock } from '@/components/game/StrengthOrderDock';
 import styles from './GameDock.module.scss';
+import type { GameMode } from '@contracts/room';
 
 interface GameDockProps {
   roomId: string;
   gameStarted: boolean;
   currentTrump: TrumpType | null;
-  gameMode: 'normal' | 'pro';
+  gameMode: GameMode;
   gamePhase?: string | null;
   players?: Player[];
   teamNames?: TeamNames;

@@ -1,4 +1,5 @@
 import type { SeatId } from './ids';
+import type { GameMode } from './room';
 
 export type Team = 0 | 1;
 
@@ -100,7 +101,7 @@ export interface GameStatePayload {
   hostSeatId: SeatId;
   pointsToWin: number;
   teamNames?: TeamNames;
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
 }
 
 export interface BlowUpdatedPayload {
@@ -243,7 +244,7 @@ export interface GameStartedPayload {
   players: PlayerContract[];
   pointsToWin: number;
   teamNames?: TeamNames;
-  gameMode?: 'normal' | 'pro';
+  gameMode?: GameMode;
   currentTurnSeatId?: SeatId;
 }
 

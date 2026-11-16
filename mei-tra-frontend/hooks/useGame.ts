@@ -39,6 +39,7 @@ import type {
   UpdateTurnPayload,
 } from '@contracts/game';
 import type {
+  GameMode,
   GamePlayerJoinedPayload,
   RoomSyncPayload,
 } from '@contracts/room';
@@ -388,7 +389,7 @@ export const useGame = () => {
   const [isHost, setIsHost] = useState(false);
   const [isSpectator, setIsSpectator] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(0);
-  const [gameMode, setGameMode] = useState<'normal' | 'pro'>('normal');
+  const [gameMode, setGameMode] = useState<GameMode>('normal');
   const [teamNames, setTeamNames] = useState<TeamNames | undefined>();
   const [idleSeatIds, setIdleSeatIds] = useState<string[]>([]);
   const [disconnectedSeatIds, setDisconnectedSeatIds] = useState<string[]>([]);

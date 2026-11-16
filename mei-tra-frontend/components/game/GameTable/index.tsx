@@ -19,6 +19,7 @@ import { useFirstTurnReveal } from '@/components/game/StartPlayerJanken/useFirst
 import { asSeatId } from '@contracts/ids';
 import type { DealAnimationCue } from '@meitra/game-client/deal-animation';
 import type { RoundSettlement } from '@contracts/game';
+import type { GameMode } from '@contracts/room';
 
 interface GameTableProps {
   whoseTurn: string | null;
@@ -45,7 +46,7 @@ interface GameTableProps {
   idleSeatIds?: string[];
   disconnectedSeatIds?: string[];
   pointsToWin: number;
-  gameMode: 'normal' | 'pro';
+  gameMode: GameMode;
   openDeclared?: boolean;
   openResolved?: boolean;
   revealedHands?: Partial<Record<string, string[]>>;
