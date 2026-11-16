@@ -2553,6 +2553,89 @@ describe('Reconnection Token Management', () => {
         expect(table.getPersistedRoom()?.players[0].isCOM).toBe(true);
       });
 
+      it('keeps a game for the last person who leaves it, even across a restart', async () => {
+        const players = [
+          makeRoomPlayer('mine', 'Mine', 0, {
+            userId: 'user-mine',
+            isAuthenticated: true,
+            participantKey: 'user-mine',
+          }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        const table = seatedTable('mine', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gamePhase = 'play';
+        connect(gameState, 'mine');
+
+        await roomService.leaveRoom(roomId, asSeatId('mine'));
+
+        expect(roomRepository.delete).not.toHaveBeenCalled();
+        const kept = table.getPersistedRoom()?.players[0];
+        expect(kept).toMatchObject({ isCOM: true, userId: 'user-mine' });
+
+        // The lobby still lists it, which is how they find their way back.
+        roomRepository.findAll.mockResolvedValue([table.getPersistedRoom()!]);
+        expect((await roomService.listRooms()).map((room) => room.id)).toEqual([
+          roomId,
+        ]);
+
+        // A restart forgets the in-memory vacant seat; the seat owner remains.
+        (
+          roomService as unknown as { vacantSeats: Record<string, unknown> }
+        ).vacantSeats = {};
+
+        const joined = await roomService.joinRoom(roomId, {
+          socketId: 'socket-mine-again',
+          seatId: asSeatId('stale-seat'),
+          userId: 'user-mine',
+          isAuthenticated: true,
+          name: 'Mine',
+        });
+
+        expect(joined).toBe(true);
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          seatId: 'mine',
+          isCOM: false,
+        });
+        expect(table.getPersistedRoom()?.hostSeatId).toBe('mine');
+      });
+
+      it('lets other leavers go while someone is still playing', async () => {
+        const players = [
+          makeRoomPlayer('leaver', 'Leaver', 0, { userId: 'user-leaver' }),
+          makeRoomPlayer('stays', 'Stays', 1, { userId: 'user-stays' }),
+        ];
+        const table = seatedTable('stays', players);
+        const gameState = await seatGamePlayers(players);
+        connect(gameState, 'stays');
+
+        await roomService.leaveRoom(roomId, asSeatId('leaver'));
+
+        // Someone else can take the seat, as before.
+        expect(table.getPersistedRoom()?.players[0]).toMatchObject({
+          isCOM: true,
+        });
+        expect(table.getPersistedRoom()?.players[0].userId).toBeFalsy();
+      });
+
+      it('still deletes a finished game when the last person leaves', async () => {
+        const players = [
+          makeRoomPlayer('mine', 'Mine', 0, { userId: 'user-mine' }),
+          makeRoomPlayer('com', 'COM', 1, { isCOM: true }),
+        ];
+        seatedTable('mine', players);
+        const gameState = await seatGamePlayers(players);
+        gameState.getState().gameOver = {
+          winner: 'Team 0',
+          winningTeam: 0,
+          finalScores: gameState.getState().teamScores,
+        };
+
+        await roomService.leaveRoom(roomId, asSeatId('mine'));
+
+        expect(roomRepository.delete).toHaveBeenCalledWith(roomId);
+      });
+
       it('gives the host to the first human who reclaims a seat while COM holds it', async () => {
         const players = [
           makeRoomPlayer('host', 'COM', 0, { isCOM: true }),

@@ -921,7 +921,7 @@ describe('GameGateway COM recovery integration', () => {
       return { result, trigger: testGateway.triggerComAutoPlayIfNeeded };
     };
 
-    // With every human gone only COM drives play, and after a restart nothing
+    // A game nobody owns is driven by COM alone, and after a restart nothing
     // wakes it until someone looks.
     it('wakes COM for a game in progress', async () => {
       const { result, trigger } = await watch('playing');
@@ -932,6 +932,74 @@ describe('GameGateway COM recovery integration', () => {
 
     it('leaves a waiting room alone', async () => {
       const { trigger } = await watch('waiting');
+
+      expect(trigger).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when someone sits down at a table', () => {
+    const join = async (status: 'playing' | 'waiting') => {
+      const gateway = createGateway();
+      const room = { id: 'room-1', status };
+      const testGateway = gateway as unknown as {
+        activityTracker: { recordActivity: jest.Mock };
+        rejectInactiveMutatingAction: jest.Mock;
+        spectatorGatewayEffectsService: { leaveCurrentRoom: jest.Mock };
+        joinRoomUseCase: { execute: jest.Mock };
+        joinRoomGatewayEffectsService: { buildEffects: jest.Mock };
+        roomUpdateGatewayEffectsService: { buildRoomView: jest.Mock };
+        dispatchEvents: jest.Mock;
+        triggerComAutoPlayIfNeeded: jest.Mock;
+        playerRooms: Map<string, string>;
+        server: object;
+      };
+      testGateway.activityTracker = { recordActivity: jest.fn() };
+      testGateway.rejectInactiveMutatingAction = jest
+        .fn()
+        .mockResolvedValue(false);
+      testGateway.spectatorGatewayEffectsService = {
+        leaveCurrentRoom: jest.fn().mockResolvedValue(undefined),
+      };
+      testGateway.joinRoomUseCase = {
+        execute: jest.fn().mockResolvedValue({
+          success: true,
+          data: {},
+          normalizedUser: { userId: 'user-1' },
+        }),
+      };
+      testGateway.joinRoomGatewayEffectsService = {
+        buildEffects: jest.fn().mockResolvedValue({ events: [], room }),
+      };
+      testGateway.roomUpdateGatewayEffectsService = {
+        buildRoomView: jest.fn().mockResolvedValue({ room }),
+      };
+      testGateway.dispatchEvents = jest.fn();
+      testGateway.triggerComAutoPlayIfNeeded = jest.fn();
+      testGateway.playerRooms = new Map();
+      testGateway.server = {};
+
+      const result = await gateway.handleJoinRoom(
+        {
+          id: 'socket-1',
+          data: { user: { id: 'user-1' } },
+          emit: jest.fn(),
+          join: jest.fn().mockResolvedValue(undefined),
+        } as unknown as Socket,
+        { roomId: 'room-1' },
+      );
+      return { result, trigger: testGateway.triggerComAutoPlayIfNeeded };
+    };
+
+    // A game waits while its owners are away, so coming back has to restart COM.
+    it('wakes COM for a game in progress', async () => {
+      const { result, trigger } = await join('playing');
+
+      expect(result.success).toBe(true);
+      expect(trigger).toHaveBeenCalledWith('room-1');
+    });
+
+    it('leaves a waiting room alone', async () => {
+      const { trigger } = await join('waiting');
 
       expect(trigger).not.toHaveBeenCalled();
     });
