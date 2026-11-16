@@ -181,7 +181,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
     name: string,
     hostUser: SessionUser,
     pointsToWin: number,
-    teamAssignmentMethod: 'random' | 'host-choice',
     gameMode: GameMode = 'normal',
   ): Promise<Room> {
     if (!hostUser.userId) {
@@ -212,7 +211,6 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod,
         pointsToWin,
         allowSpectators: true,
         gameMode,

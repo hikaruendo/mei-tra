@@ -30,7 +30,6 @@ export interface RoomSettings {
   maxPlayers: number;
   isPrivate: boolean;
   password?: string | null;
-  teamAssignmentMethod: 'random' | 'host-choice';
   pointsToWin: number;
   allowSpectators: boolean;
   gameMode?: GameMode;

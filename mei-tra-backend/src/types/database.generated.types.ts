@@ -955,7 +955,6 @@ export type Database = {
       chat_room_visibility: 'public' | 'friends' | 'private';
       game_phase: 'deal' | 'blow' | 'play' | 'waiting' | 'round-end';
       room_status: 'waiting' | 'ready' | 'playing' | 'finished' | 'abandoned';
-      team_assignment_method: 'random' | 'host-choice';
       trump_type: 'tra' | 'herz' | 'daiya' | 'club' | 'zuppe';
     };
     CompositeTypes: {
@@ -1094,7 +1093,6 @@ export const Constants = {
       chat_room_visibility: ['public', 'friends', 'private'],
       game_phase: ['deal', 'blow', 'play', 'waiting', 'round-end'],
       room_status: ['waiting', 'ready', 'playing', 'finished', 'abandoned'],
-      team_assignment_method: ['random', 'host-choice'],
       trump_type: ['tra', 'herz', 'daiya', 'club', 'zuppe'],
     },
   },

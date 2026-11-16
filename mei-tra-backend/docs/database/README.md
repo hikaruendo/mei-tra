@@ -81,7 +81,6 @@ Meitra の Supabase public スキーマ。認証アカウント、ゲーム上�
 | public.chat_room_visibility | friends, private, public |
 | public.game_phase | blow, deal, play, waiting |
 | public.room_status | abandoned, finished, playing, ready, waiting |
-| public.team_assignment_method | host-choice, random |
 | public.trump_type | club, daiya, herz, tra, zuppe |
 | realtime.action | DELETE, ERROR, INSERT, TRUNCATE, UPDATE |
 | realtime.equality_op | eq, gt, gte, in, lt, lte, neq |

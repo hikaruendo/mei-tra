@@ -171,7 +171,6 @@ describe('Game Use Cases', () => {
       maxPlayers: 4,
       isPrivate: false,
       password: null,
-      teamAssignmentMethod: 'random' as const,
       pointsToWin: 30,
       allowSpectators: true,
     },
@@ -353,7 +352,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         roomName: 'Room',
         pointsToWin: 30,
-        teamAssignmentMethod: 'random',
         socketId: 'socket-1',
         authenticatedUser: { id: 'user-1' } as any,
       });
@@ -388,7 +386,6 @@ describe('Game Use Cases', () => {
       const result = await useCase.execute({
         roomName: 'Room',
         pointsToWin: 30,
-        teamAssignmentMethod: 'random',
         playerName: 'Host',
         socketId: 'socket-1',
         authenticatedUser: { id: 'player-1' } as any,
@@ -405,7 +402,7 @@ describe('Game Use Cases', () => {
           socketId: 'socket-1',
         }),
         30,
-        'random',
+        undefined,
       );
       expect(roomService.joinRoom).toHaveBeenCalled();
     });

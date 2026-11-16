@@ -837,7 +837,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const result = await this.createRoomUseCase.execute({
         roomName: data.name,
         pointsToWin: data.pointsToWin,
-        teamAssignmentMethod: data.teamAssignmentMethod,
         gameMode: data.gameMode,
         playerName,
         socketId: client.id,

@@ -5,7 +5,6 @@ import { RoomPlayer } from '../../types/room.types';
 export interface CreateRoomRequest {
   roomName: string;
   pointsToWin: number;
-  teamAssignmentMethod: 'random' | 'host-choice';
   gameMode?: GameMode;
   playerName?: string;
   socketId: string;

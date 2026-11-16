@@ -367,7 +367,6 @@ describe('Reconnection Token Management', () => {
         maxPlayers: 4,
         isPrivate: false,
         password: null,
-        teamAssignmentMethod: 'random',
         pointsToWin: 10,
         allowSpectators: true,
       },

@@ -60,7 +60,6 @@ describe('GameHistoryController', () => {
       maxPlayers: 4,
       isPrivate: false,
       password: null,
-      teamAssignmentMethod: 'random' as const,
       pointsToWin: 10,
       allowSpectators: false,
       teamNames: { 0: '111', 1: '222' },
