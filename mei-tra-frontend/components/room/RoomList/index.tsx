@@ -105,7 +105,7 @@ export const RoomList: React.FC<RoomListProps> = ({
       'Host';
     const fallbackRoomName = t('room.defaultRoomName', { name: hostDisplayName });
     try {
-      const created = await createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, gameMode);
+      const created = await createRoom(newRoomName.trim() || fallbackRoomName, pointsToWin, 'random', gameMode);
       if (created) {
         setNewRoomName('');
         setPointsToWin(5);

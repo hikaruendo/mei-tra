@@ -67,7 +67,7 @@ it.each([
   fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '20' } });
   fireEvent.click(screen.getByRole('button', { name: label }));
 
-  await waitFor(() => expect(mockCreateRoom).toHaveBeenCalledWith('Test room', 20, mode));
+  await waitFor(() => expect(mockCreateRoom).toHaveBeenCalledWith('Test room', 20, 'random', mode));
 });
 
 it('uses the normal mode for Enter and disables both actions until creation finishes', async () => {
@@ -78,7 +78,7 @@ it('uses the normal mode for Enter and disables both actions until creation fini
   const pro = screen.getByRole('button', { name: 'room.createPro' });
   fireEvent.submit(normal.closest('form')!);
 
-  expect(mockCreateRoom).toHaveBeenCalledWith(expect.any(String), 5, 'normal');
+  expect(mockCreateRoom).toHaveBeenCalledWith(expect.any(String), 5, 'random', 'normal');
   expect(normal).toBeDisabled();
   expect(pro).toBeDisabled();
 

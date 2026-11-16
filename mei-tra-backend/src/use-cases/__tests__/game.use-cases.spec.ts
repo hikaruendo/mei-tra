@@ -402,6 +402,7 @@ describe('Game Use Cases', () => {
           socketId: 'socket-1',
         }),
         30,
+        undefined,
       );
       expect(roomService.joinRoom).toHaveBeenCalled();
     });

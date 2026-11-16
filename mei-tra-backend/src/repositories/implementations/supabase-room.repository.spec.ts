@@ -263,42 +263,58 @@ describe('SupabaseRoomRepository', () => {
     ]);
   });
 
-  it('reads a room whose stored settings still carry teamAssignmentMethod', async () => {
+  it.each([
+    ['without teamAssignmentMethod', {}],
+    [
+      'with the legacy teamAssignmentMethod',
+      { teamAssignmentMethod: 'random' },
+    ],
+  ])('reads stored room settings %s', async (_label, extraSettings) => {
     const row = createRoomRow(
       'room-1',
-      'Old room',
+      'Stored room',
       '2026-04-16T00:00:00.000Z',
       'room-1-player-1',
     );
-    const legacyRow = {
-      ...row,
-      settings: { ...row.settings, teamAssignmentMethod: 'host-choice' },
-    };
-    const single = jest
-      .fn()
-      .mockResolvedValue({ data: legacyRow, error: null });
+    const storedSettings = { ...row.settings, ...extraSettings };
+
+    const roomSingle = jest.fn().mockResolvedValue({
+      data: { ...row, settings: storedSettings },
+      error: null,
+    });
+    const roomEq = jest.fn().mockReturnValue({ single: roomSingle });
+    const roomsSelect = jest.fn().mockReturnValue({ eq: roomEq });
+
     const playerOrderBySeatIndex = jest
       .fn()
       .mockResolvedValue({ data: [], error: null });
-    const from = jest.fn((table: string) =>
-      table === 'rooms'
-        ? { select: () => ({ eq: () => ({ single }) }) }
-        : {
-            select: () => ({
-              in: () => ({
-                order: () => ({ order: playerOrderBySeatIndex }),
-              }),
-            }),
-          },
-    );
-    const repository = new SupabaseRoomRepository({
-      client: { from },
-    } as unknown as SupabaseService);
-
-    await expect(repository.findById('room-1')).resolves.toMatchObject({
-      id: 'room-1',
-      settings: { pointsToWin: 7 },
+    const playerOrderByRoomId = jest.fn().mockReturnValue({
+      order: playerOrderBySeatIndex,
     });
+    const playerIn = jest.fn().mockReturnValue({ order: playerOrderByRoomId });
+    const playersSelect = jest.fn().mockReturnValue({ in: playerIn });
+
+    const from = jest.fn((table: string) => {
+      if (table === 'rooms') {
+        return { select: roomsSelect };
+      }
+
+      if (table === 'room_players') {
+        return { select: playersSelect };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const supabaseService = {
+      client: { from },
+    } as unknown as SupabaseService;
+
+    const repository = new SupabaseRoomRepository(supabaseService);
+
+    const room = await repository.findById('room-1');
+
+    expect(room?.settings).toEqual({ ...storedSettings, gameMode: 'normal' });
   });
 
   it('queries recent finished rooms by user ordered by last activity', async () => {
