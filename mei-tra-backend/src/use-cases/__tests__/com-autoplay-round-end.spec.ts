@@ -1,4 +1,4 @@
-import { ComAutoPlayUseCase } from '../com-autoplay.use-case';
+import { createComAutoPlayUseCase } from './com-autoplay.fixture';
 import {
   COM_HOST_ROUND_CONFIRM_DELAY_MS,
   startNextRound,
@@ -17,21 +17,37 @@ const mockedStartNextRound = startNextRound as jest.MockedFunction<
   typeof startNextRound
 >;
 
-const buildUseCase = (options: { hostIsCom: boolean; status?: RoomStatus }) => {
+const buildUseCase = (options: {
+  hostIsCom: boolean;
+  status?: RoomStatus;
+  hostUserId?: string;
+  hostConnected?: boolean;
+}) => {
   const state = {
     gamePhase: 'round-end',
     gameOver: null,
     pendingBrokenHandReveal: null,
     players: [],
   };
-  const roomGameState = { getState: () => state };
+  const roomGameState = {
+    getState: () => state,
+    getPlayerConnectionState: (seatId: string) =>
+      seatId === 'host' && (options.hostConnected ?? !options.hostIsCom)
+        ? { socketId: 'socket-host' }
+        : null,
+  };
   const room = {
     id: 'room-1',
     status: options.status ?? RoomStatus.PLAYING,
     hostSeatId: asSeatId('host'),
     players: [
-      { seatId: asSeatId('host'), isCOM: options.hostIsCom, isHost: true },
-      { seatId: asSeatId('other'), isCOM: true, isHost: false },
+      {
+        seatId: asSeatId('host'),
+        isCOM: options.hostIsCom,
+        isHost: true,
+        userId: options.hostUserId ?? null,
+      },
+      { seatId: asSeatId('other'), isCOM: true, isHost: false, userId: null },
     ],
   };
   const roomService = {
@@ -39,18 +55,7 @@ const buildUseCase = (options: { hostIsCom: boolean; status?: RoomStatus }) => {
     getRoom: jest.fn().mockResolvedValue(room),
   };
 
-  return new ComAutoPlayUseCase(
-    roomService as never,
-    { isComPlayer: () => true } as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
+  return createComAutoPlayUseCase(roomService, () => true);
 };
 
 describe('ComAutoPlayUseCase at round end', () => {
@@ -91,6 +96,26 @@ describe('ComAutoPlayUseCase at round end', () => {
       expect.objectContaining({ success: true, events: [] }),
     );
     expect(result.delayedEvents).toBeUndefined();
+  });
+
+  it('leaves the results up while the person who owns the host seat is away', async () => {
+    const result = await buildUseCase({
+      hostIsCom: true,
+      hostUserId: 'user-host',
+    }).execute({ roomId: 'room-1' });
+
+    expect(mockedStartNextRound).not.toHaveBeenCalled();
+    expect(result.delayedEvents).toBeUndefined();
+  });
+
+  it('leaves the results up while the human host is disconnected', async () => {
+    await buildUseCase({
+      hostIsCom: false,
+      hostUserId: 'user-host',
+      hostConnected: false,
+    }).execute({ roomId: 'room-1' });
+
+    expect(mockedStartNextRound).not.toHaveBeenCalled();
   });
 
   it('does nothing once the room is no longer playing', async () => {

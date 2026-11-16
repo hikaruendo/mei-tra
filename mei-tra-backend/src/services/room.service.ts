@@ -29,6 +29,11 @@ import { randomUUID } from 'crypto';
 import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
 import { electHost, returnHostToHuman } from '../domain/host-election';
+import {
+  holdSeatFor,
+  isLastPersonAtTable,
+  ownsSeat,
+} from '../domain/absent-owner';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -39,7 +44,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
   // 退出席情報（ルームIDごとに不変の席UUIDをキーとして保存）
   private vacantSeats: VacantSeats = {};
 
-  private readonly ROOM_EXPIRY_TIME = 6 * 60 * 60 * 1000; // 6時間
+  private readonly ROOM_EXPIRY_TIME = 48 * 60 * 60 * 1000; // 48時間
   private readonly FINISHED_ROOM_RETENTION_TIME = 30 * 24 * 60 * 60 * 1000; // 30日
   private readonly CLEANUP_INTERVAL = 30 * 60 * 1000; // 30分
   private cleanupIntervalId: ReturnType<typeof setInterval>;
@@ -169,7 +174,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
           room.status !== RoomStatus.FINISHED &&
           room.status !== RoomStatus.ABANDONED,
       )
-      .filter((room) => room.players.some((player) => !player.isCOM));
+      .filter((room) => room.players.some(ownsSeat));
   }
 
   async createNewRoom(
@@ -423,6 +428,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       room.status === RoomStatus.PLAYING ||
       gameState.getState().gamePhase !== null;
 
+    const isGameInProgress =
+      isGameStarted &&
+      room.status !== RoomStatus.FINISHED &&
+      !gameState.getState().gameOver;
+
     if (isGameStarted) {
       const state = gameState.getState();
 
@@ -436,10 +446,14 @@ export class RoomService implements IRoomService, OnModuleDestroy {
         // 席UUIDを維持したまま占有者をCOMへ切り替える。
         // uniqueIdxはsocket/participant metadataだけを識別する。
         const uniqueIdx = `left-${Date.now()}`;
+        const leavingPlayer = room.players[playerIndex];
         const comPlayer = this.createActiveCOMReplacement(
           uniqueIdx,
-          room.players[playerIndex],
+          leavingPlayer,
         );
+        if (isGameInProgress && isLastPersonAtTable(room.players, seatId)) {
+          holdSeatFor(comPlayer, leavingPlayer);
+        }
 
         const resolvedSeatId = room.players[playerIndex].seatId;
         this.vacantSeats[roomId][resolvedSeatId] = {
@@ -485,8 +499,7 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       gameState.removeSeatToken(seatId);
     }
 
-    // If all players are COM placeholders (no human players), delete the room
-    if (room.players.every((p) => p.isCOM === true)) {
+    if (!isGameInProgress && room.players.every((p) => p.isCOM === true)) {
       await this.deleteRoom(roomId);
       return true;
     }

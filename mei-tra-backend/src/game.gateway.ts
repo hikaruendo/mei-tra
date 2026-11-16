@@ -969,6 +969,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       this.dispatchEvents(joinEffects.events);
+      if (joinEffects.room.status === RoomStatus.PLAYING) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
+      }
 
       return {
         success: true,
@@ -1014,8 +1017,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         result.data.gameState,
       );
-      // Once every human has left, only COM drives the table, and after a
-      // restart nothing wakes it until someone looks.
+      // A game nobody owns is driven by COM alone, and after a restart nothing
+      // wakes it until someone looks. A game waiting for its owner stays put.
       if (result.data.room.status === RoomStatus.PLAYING) {
         this.triggerComAutoPlayIfNeeded(data.roomId);
       }
