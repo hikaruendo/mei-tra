@@ -11,13 +11,16 @@ create table public.ranked_matches (
   check ((completed_at is null) = (winning_team is null))
 );
 
--- The four people who start a match. Each keeps the result of the team they
--- started on, whoever finishes their seat. Deleting an account removes only
--- that person's row, so their opponents' results stay.
+-- The four people who start a match, on the team they started on. Deleting an
+-- account removes only that person's row, so their opponents' results stay.
 create table public.ranked_match_participants (
   match_id uuid not null references public.ranked_matches(match_id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   team smallint not null check (team in (0, 1)),
+  -- Set when the match ends and this person is not seated on the team they
+  -- started on: they left and did not come back, or came back on the other
+  -- side. A forfeited match counts as a loss whatever the result.
+  forfeited boolean not null default false,
   primary key (match_id, user_id)
 );
 
@@ -34,7 +37,8 @@ revoke all on public.ranked_match_participants from anon, authenticated;
 
 -- Runs inside the game-state write, so a match and its participants commit
 -- with the save that starts the game, and the result with the save that ends
--- it. It does two things only: record who starts a match, and record who won.
+-- it. It does two things only: record who starts a match, and record how it
+-- ended.
 create or replace function meitra_private.capture_ranked_match()
 returns trigger
 language plpgsql security definer
@@ -79,8 +83,9 @@ begin
     return new;
   end if;
 
-  -- The match ends. Only the winning team is recorded; each participant's
-  -- result follows from the team they started on.
+  -- The match ends. The winning team is recorded, and anyone not seated on
+  -- the team they started on forfeits. A COM covering a dropped connection
+  -- keeps its owner's user_id, so that owner is still seated.
   v_winning_team := (new.state_data #>> '{gameOver,winningTeam}')::integer;
   if v_winning_team is null or v_winning_team not in (0, 1) then
     return new;
@@ -91,6 +96,20 @@ begin
       completed_at = now()
   where match_id = v_match_id
     and completed_at is null;
+  if not found then
+    return new;
+  end if;
+
+  update public.ranked_match_participants p
+  set forfeited = true
+  where p.match_id = v_match_id
+    and not exists (
+      select 1
+      from public.room_players rp
+      where rp.room_id = new.room_id
+        and rp.user_id = p.user_id
+        and rp.team = p.team
+    );
   return new;
 end;
 $$;
@@ -117,7 +136,9 @@ begin
 
   with totals as (
     select p.user_id, count(*)::integer as games_played,
-           count(*) filter (where p.team = m.winning_team)::integer as games_won
+           count(*) filter (
+             where p.team = m.winning_team and not p.forfeited
+           )::integer as games_won
     from public.ranked_match_participants p
     join public.ranked_matches m on m.match_id = p.match_id
     where m.mode = p_mode and m.completed_at is not null

@@ -490,16 +490,19 @@ export type Database = {
       };
       ranked_match_participants: {
         Row: {
+          forfeited: boolean;
           match_id: string;
           team: number;
           user_id: string;
         };
         Insert: {
+          forfeited?: boolean;
           match_id: string;
           team: number;
           user_id: string;
         };
         Update: {
+          forfeited?: boolean;
           match_id?: string;
           team?: number;
           user_id?: string;

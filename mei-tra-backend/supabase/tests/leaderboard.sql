@@ -115,9 +115,39 @@ begin
 end
 $test$;
 
+-- A forfeited match counts as played and lost, even when that team won.
+do $forfeit_test$
+declare
+  players uuid[] := array[gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid()];
+  result jsonb;
+  i integer;
+begin
+  insert into auth.users (id, aud, role, is_anonymous)
+  select id, 'authenticated', 'authenticated', false from unnest(players) as id;
+  for i in 1..10 loop
+    perform pg_temp.finish_match('normal',
+      array[players[1], players[3]], array[players[2], players[4]], 0);
+  end loop;
+  update public.ranked_match_participants set forfeited = true
+  where user_id = players[1]
+    and match_id = (select match_id from public.ranked_match_participants
+                    where user_id = players[1] limit 1);
+
+  result := public.get_win_rate_leaderboard('normal', players[1]);
+  if (result->'me'->>'gamesPlayed')::integer <> 10
+     or (result->'me'->>'gamesWon')::integer <> 9 then
+    raise exception 'A forfeited win was not counted as a loss: %', result;
+  end if;
+  result := public.get_win_rate_leaderboard('normal', players[3]);
+  if (result->'me'->>'gamesWon')::integer <> 10 then
+    raise exception 'One player forfeiting changed their partner''s result: %', result;
+  end if;
+end
+$forfeit_test$;
+
 -- Exercise the real game-state write path: a match and its participants are
--- recorded when the game starts, the winning team when it ends, and the result
--- belongs to the people who started each seat.
+-- recorded when the game starts, and when it ends the winning team, plus a
+-- forfeit for anyone not seated on the team they started on.
 do $trigger_test$
 declare
   -- players[5] is not seated at the start; they take over a seat mid-match.
@@ -125,6 +155,9 @@ declare
   test_room_id uuid := gen_random_uuid();
   match_one uuid := gen_random_uuid();
   match_com uuid := gen_random_uuid();
+  match_dropped uuid := gen_random_uuid();
+  match_returned uuid := gen_random_uuid();
+  match_switched uuid := gen_random_uuid();
   match_substitute uuid := gen_random_uuid();
   match_deleted uuid := gen_random_uuid();
   match_failed uuid := gen_random_uuid();
@@ -151,7 +184,8 @@ begin
     raise exception 'Match start did not record the match and its four participants';
   end if;
 
-  -- Player 2 leaves and a COM finishes the seat; their team wins.
+  -- Player 2 leaves and a COM finishes the seat; their team wins, but player 2
+  -- forfeits because they are no longer seated.
   update public.room_players set is_com = true, user_id = null
   where room_players.room_id = test_room_id and seat_index = 1;
   update public.game_states
@@ -162,9 +196,11 @@ begin
     or (select winning_team from public.ranked_matches where match_id = match_one) <> 1 then
     raise exception 'Game over did not record the winning team';
   end if;
-  if (select team from public.ranked_match_participants
-      where match_id = match_one and user_id = players[2]) <> 1 then
-    raise exception 'The player who left lost the seat the COM finished';
+  if not (select forfeited from public.ranked_match_participants
+          where match_id = match_one and user_id = players[2])
+    or (select count(*) from public.ranked_match_participants
+        where match_id = match_one and forfeited) <> 1 then
+    raise exception 'Only the player who left should forfeit';
   end if;
 
   -- Saving the same game over again changes nothing.
@@ -187,10 +223,60 @@ begin
     raise exception 'A match that started with a COM seat was ranked';
   end if;
 
-  -- Four people start again; then someone else takes over player 2's seat and
-  -- finishes it. The result stays with player 2, and the newcomer gets nothing.
+  -- Player 2's connection drops and a COM covers the seat under their account:
+  -- they are still seated, so they do not forfeit.
   update public.room_players set is_com = false, user_id = players[2]
   where room_players.room_id = test_room_id and seat_index = 1;
+  update public.game_states
+  set state_data = jsonb_build_object('rankingMatchId', match_dropped, 'gameOver', null)
+  where game_states.room_id = test_room_id;
+  update public.room_players set is_com = true
+  where room_players.room_id = test_room_id and seat_index = 1;
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":1}')
+  where game_states.room_id = test_room_id;
+  if exists (select 1 from public.ranked_match_participants
+             where match_id = match_dropped and forfeited) then
+    raise exception 'A dropped connection covered by a COM was treated as leaving';
+  end if;
+
+  -- Player 2 leaves and comes back to their own seat before the end.
+  update public.room_players set is_com = false
+  where room_players.room_id = test_room_id and seat_index = 1;
+  update public.game_states
+  set state_data = jsonb_build_object('rankingMatchId', match_returned, 'gameOver', null)
+  where game_states.room_id = test_room_id;
+  update public.room_players set is_com = true, user_id = null
+  where room_players.room_id = test_room_id and seat_index = 1;
+  update public.room_players set is_com = false, user_id = players[2]
+  where room_players.room_id = test_room_id and seat_index = 1;
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":1}')
+  where game_states.room_id = test_room_id;
+  if exists (select 1 from public.ranked_match_participants
+             where match_id = match_returned and forfeited) then
+    raise exception 'A player who came back to their team forfeited';
+  end if;
+
+  -- Players 1 and 2 end the match on each other's team: both forfeit.
+  update public.game_states
+  set state_data = jsonb_build_object('rankingMatchId', match_switched, 'gameOver', null)
+  where game_states.room_id = test_room_id;
+  update public.room_players set team = 1 - team
+  where room_players.room_id = test_room_id and seat_index in (0, 1);
+  update public.game_states
+  set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":0}')
+  where game_states.room_id = test_room_id;
+  if (select array_agg(user_id order by user_id) from public.ranked_match_participants
+      where match_id = match_switched and forfeited)
+     is distinct from (select array_agg(id order by id) from unnest(array[players[1], players[2]]) as id) then
+    raise exception 'Players who ended on the other team did not forfeit';
+  end if;
+  update public.room_players set team = 1 - team
+  where room_players.room_id = test_room_id and seat_index in (0, 1);
+
+  -- Someone else takes over player 2's seat and finishes it. Player 2 left, so
+  -- they forfeit, and the newcomer gets nothing.
   update public.game_states
   set state_data = jsonb_build_object('rankingMatchId', match_substitute, 'gameOver', null)
   where game_states.room_id = test_room_id;
@@ -199,12 +285,12 @@ begin
   update public.game_states
   set state_data = jsonb_set(state_data, '{gameOver}', '{"winningTeam":1}')
   where game_states.room_id = test_room_id;
-  if not exists (select 1 from public.ranked_match_participants
-                 where match_id = match_substitute and user_id = players[2])
+  if not coalesce((select forfeited from public.ranked_match_participants
+                   where match_id = match_substitute and user_id = players[2]), false)
     or exists (select 1 from public.ranked_match_participants
                where match_id = match_substitute and user_id = players[5])
     or (select completed_at from public.ranked_matches where match_id = match_substitute) is null then
-    raise exception 'A substitute took over the result of the player who started the seat';
+    raise exception 'A substitute changed the result of the player who left';
   end if;
 
   -- A participant deletes their account mid-match; the others still get the result.
