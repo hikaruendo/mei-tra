@@ -1,7 +1,7 @@
 import { SupabaseService } from '../../database/supabase.service';
 import { GameState } from '../../types/game.types';
 import { RoomPlayer } from '../../types/room.types';
-import { asSeatId } from '../../types/identity.types';
+import { asRankingMatchId, asSeatId } from '../../types/identity.types';
 import { SupabaseGameStateRepository } from './supabase-game-state.repository';
 
 describe('SupabaseGameStateRepository', () => {
@@ -503,6 +503,50 @@ describe('SupabaseGameStateRepository', () => {
       p_expected_version: 4,
     });
     expect(state?.version).toBe(5);
+  });
+
+  it('writes the state keys the ranking trigger reads', async () => {
+    const order = jest.fn().mockResolvedValue({
+      data: [roomPlayerRow],
+      error: null,
+    });
+    const eq = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq });
+    const rpc = jest.fn().mockResolvedValue({
+      data: { ...gameStateRow, version: 5 },
+      error: null,
+    });
+    const repository = new SupabaseGameStateRepository({
+      client: {
+        rpc,
+        from: jest.fn().mockReturnValue({ select }),
+      },
+    } as unknown as SupabaseService);
+    const rankingMatchId = asRankingMatchId(
+      '00000000-0000-4000-8000-000000009001',
+    );
+
+    await repository.update(gameStateRow.room_id, {
+      rankingMatchId,
+      gameOver: {
+        winner: 'Team 1',
+        winningTeam: 1,
+        finalScores: {
+          0: { play: 0, total: 3 },
+          1: { play: 0, total: 10 },
+        },
+      },
+    });
+
+    const [functionName, args] = rpc.mock.calls[0] as [
+      string,
+      { p_state_patch: Record<string, unknown> },
+    ];
+    expect(functionName).toBe('atomic_update_game_state');
+    expect(args.p_state_patch.rankingMatchId).toBe(rankingMatchId);
+    expect(
+      (args.p_state_patch.gameOver as { winningTeam?: number }).winningTeam,
+    ).toBe(1);
   });
 
   it('persists the canonical current seat id', async () => {

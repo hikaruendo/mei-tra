@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { RecentGameHistoryItemContract } from '@contracts/game-history';
 import { getBackendApiUrl } from '@/lib/backend-api';
-
-async function proxyResponse<T>(response: Response): Promise<NextResponse<T>> {
-  const contentType =
-    response.headers.get('content-type') ?? 'application/json; charset=utf-8';
-  const body = await response.text();
-
-  return new NextResponse(body, {
-    status: response.status,
-    headers: {
-      'content-type': contentType,
-    },
-  });
-}
+import { proxyBackendResponse } from '@/lib/api/proxy-backend-response';
 
 export async function GET(
   request: NextRequest,
@@ -37,5 +25,5 @@ export async function GET(
     },
   });
 
-  return proxyResponse<RecentGameHistoryItemContract[]>(response);
+  return proxyBackendResponse<RecentGameHistoryItemContract[]>(response);
 }

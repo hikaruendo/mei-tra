@@ -1,7 +1,5 @@
-import type {
-  LeaderboardMode,
-  LeaderboardResponse,
-} from '@meitra/contracts/leaderboard';
+import type { LeaderboardResponse } from '@meitra/contracts/leaderboard';
+import type { GameMode } from '@meitra/contracts/room';
 
 export class LeaderboardApiError extends Error {
   constructor(readonly status: number) {
@@ -12,7 +10,7 @@ export class LeaderboardApiError extends Error {
 
 export interface LeaderboardApiClient {
   fetchLeaderboard(
-    mode: LeaderboardMode,
+    mode: GameMode,
     token: string,
     options?: { signal?: AbortSignal },
   ): Promise<LeaderboardResponse>;
@@ -45,31 +43,35 @@ export function createLeaderboardApiClient({
   };
 }
 
-/** What the viewer is told about their own standing, before translation. */
-export type LeaderboardStanding =
-  | { kind: 'ranked'; rank: number; gamesWon: number; gamesPlayed: number }
-  | { kind: 'progress'; gamesPlayed: number; remaining: number }
-  | { kind: 'guestQualified'; minimumGames: number }
-  | { kind: 'guestProgress'; gamesPlayed: number; remaining: number };
-
-export function describeLeaderboardStanding(
-  leaderboard: LeaderboardResponse,
-  isGuest: boolean,
-): LeaderboardStanding {
-  const gamesPlayed = leaderboard.me?.gamesPlayed ?? 0;
-  const remaining = Math.max(0, leaderboard.minimumGames - gamesPlayed);
-  if (isGuest) {
-    return remaining === 0
-      ? { kind: 'guestQualified', minimumGames: leaderboard.minimumGames }
-      : { kind: 'guestProgress', gamesPlayed, remaining };
-  }
-  if (leaderboard.me?.rank) {
-    return {
-      kind: 'ranked',
-      rank: leaderboard.me.rank,
-      gamesWon: leaderboard.me.gamesWon,
-      gamesPlayed,
-    };
-  }
-  return { kind: 'progress', gamesPlayed, remaining };
+/**
+ * Loads one mode's leaderboard for the signed-in viewer and reports the
+ * outcome, unless cancelled first. Returns the cancel function.
+ */
+export function loadLeaderboard({
+  client,
+  mode,
+  getAccessToken,
+  onLoaded,
+  onFailed,
+}: {
+  client: LeaderboardApiClient;
+  mode: GameMode;
+  getAccessToken: () => Promise<string | null>;
+  onLoaded: (leaderboard: LeaderboardResponse) => void;
+  onFailed: () => void;
+}): () => void {
+  const controller = new AbortController();
+  void (async () => {
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new LeaderboardApiError(401);
+      const leaderboard = await client.fetchLeaderboard(mode, token, {
+        signal: controller.signal,
+      });
+      if (!controller.signal.aborted) onLoaded(leaderboard);
+    } catch {
+      if (!controller.signal.aborted) onFailed();
+    }
+  })();
+  return () => controller.abort();
 }

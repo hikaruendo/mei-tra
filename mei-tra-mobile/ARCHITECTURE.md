@@ -58,6 +58,7 @@ src/
 │   │   ├── help.tsx              ← 規約・プライバシー・問い合わせ
 │   │   └── account.tsx           ← ログアウト・アカウント削除
 │   ├── game-history/             ← 対局履歴一覧・詳細
+│   ├── leaderboard.tsx           ← 対人戦の勝率ランキング (設定から開く)
 │   ├── auth/callback.tsx         ← OAuth コールバック (deep link)
 │   └── room/[roomId].tsx         ← WaitingRoom or GameBoard (動的ルート)
 │
@@ -86,7 +87,8 @@ src/
 │       └── FeedbackBanner.tsx     ← エラー / 通知バナー
 │
 ├── hooks/
-│   └── useGameHistory.ts          ← 対局ログ取得 (REST API)
+│   ├── useGameHistory.ts          ← 対局ログ取得 (REST API)
+│   └── useLeaderboard.ts          ← ランキング取得 (REST API)
 │
 ├── lib/                          ← ユーティリティ・API クライアント
 │   ├── supabase.ts               ← Supabase クライアント初期化
@@ -103,6 +105,7 @@ src/
 │   ├── trump-display.ts          ← トランプ強さ順ラベル
 │   ├── profile-api.ts            ← プロフィール更新 / アバターアップロード
 │   ├── game-history-api.ts       ← 対局ログ取得 API
+│   ├── leaderboard-api.ts        ← ランキング取得 API (@meitra/api-client)
 │   ├── account-api.ts            ← アカウント削除 API
 │   ├── notifications.ts          ← Push トークン登録 / 解除
 │   └── notification-platform.ts  ← プラットフォーム抽象化 (.native.ts 実装)
@@ -482,6 +485,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `app/room/[roomId].tsx` | `app/[locale]/page.tsx` | Web はルーム別ページなし |
 | `app/rooms.tsx` | `app/[locale]/rooms/page.tsx` | どちらも、入っている部屋（作成・参加・観戦した部屋、サーバーが戻した席）があれば自動でその部屋を開き、その部屋のカードには参加・観戦を出さない |
 | `app/settings/*` | `app/[locale]/profile/page.tsx` | Mobile は設定とアカウント管理を分割 |
+| `app/leaderboard.tsx` | `app/[locale]/leaderboard/page.tsx` | Mobile は設定から、Web は上部ナビから開く |
 | `app/sign-in.tsx` | `components/auth/AuthModal.tsx` | Web はモーダル |
 
 ### Game Components
@@ -514,6 +518,7 @@ Supabase セッションは SecureStore の 2KB 制限を超えるため、独�
 | `lib/cards.ts` | `lib/utils/cardMapping.ts` | 共に `@meitra/game-client` に委譲 |
 | `lib/realtime.ts` | `app/socket.ts` | |
 | `lib/profile-api.ts` | `lib/api/user-profile.ts` | |
+| `lib/leaderboard-api.ts` | `lib/api/leaderboard.ts` | 共に `@meitra/api-client/leaderboard` を使う |
 | `lib/secure-storage.ts` | — | Mobile 専用 |
 | `lib/app-lifecycle.ts` | — | Mobile 専用 |
 | `lib/notifications.ts` | — | Mobile 専用 |
@@ -533,7 +538,8 @@ contracts/               ← Mobile / Web / Backend 共有
 ├── game.ts              ← PlayerContract, FieldContract, BlowState, TeamNames 等
 ├── socket.ts            ← ServerToClientEvents, ClientToServerEvents 型定義
 ├── push.ts              ← Push 通知ペイロード型
-└── game-history.ts      ← GameHistoryReplayViewContract, Summary 型
+├── game-history.ts      ← GameHistoryReplayViewContract, Summary 型
+└── leaderboard.ts       ← LeaderboardResponse 型
 
 shared/game-client/       ← Mobile / Web 共有
 └── src/card-validation.ts ← カードプレイ可否判定ロジック

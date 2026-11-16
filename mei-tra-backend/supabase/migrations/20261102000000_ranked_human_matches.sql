@@ -38,7 +38,8 @@ revoke all on public.ranked_match_participants from anon, authenticated;
 -- Runs inside the game-state write, so a match and its participants commit
 -- with the save that starts the game, and the result with the save that ends
 -- it. It does two things only: record who starts a match, and record how it
--- ended.
+-- ended. It reads `rankingMatchId` and `gameOver.winningTeam` from state_data;
+-- SupabaseGameStateRepository writes them under those names (its spec checks).
 create or replace function meitra_private.capture_ranked_match()
 returns trigger
 language plpgsql security definer
@@ -161,21 +162,21 @@ begin
     from eligible e
   )
   select jsonb_build_object(
-    'minimumGames', v_minimum_games,
+    'minimum_games', v_minimum_games,
     'entries', coalesce((
       select jsonb_agg(jsonb_build_object(
-        'userId', user_id, 'displayName', display_name,
-        'avatarUrl', avatar_url, 'rank', rank,
-        'gamesPlayed', games_played, 'gamesWon', games_won,
-        'winRate', round(100.0 * games_won / games_played, 1)
+        'user_id', user_id, 'display_name', display_name,
+        'avatar_url', avatar_url, 'rank', rank,
+        'games_played', games_played, 'games_won', games_won,
+        'win_rate', round(100.0 * games_won / games_played, 1)
       ) order by position)
       from ranked where position <= 100
     ), '[]'::jsonb),
     'me', (
       select jsonb_build_object(
-        'userId', p_viewer_id, 'rank', r.rank,
-        'gamesPlayed', t.games_played, 'gamesWon', t.games_won,
-        'winRate', round(100.0 * t.games_won / nullif(t.games_played, 0), 1)
+        'user_id', p_viewer_id, 'rank', r.rank,
+        'games_played', t.games_played, 'games_won', t.games_won,
+        'win_rate', round(100.0 * t.games_won / nullif(t.games_played, 0), 1)
       )
       from totals t left join ranked r on r.user_id = t.user_id
       where t.user_id = p_viewer_id

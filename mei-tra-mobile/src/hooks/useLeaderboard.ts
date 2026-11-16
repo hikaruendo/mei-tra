@@ -1,38 +1,37 @@
 import { useEffect, useState } from 'react';
-import type { LeaderboardMode, LeaderboardResponse } from '@meitra/contracts/leaderboard';
+import type { LeaderboardResponse } from '@meitra/contracts/leaderboard';
+import type { GameMode } from '@meitra/contracts/room';
+import { loadLeaderboard } from '@meitra/api-client/leaderboard';
 import { leaderboardApi } from '@/lib/leaderboard-api';
 
+interface LeaderboardState {
+  leaderboard: LeaderboardResponse | null;
+  isLoading: boolean;
+  hasError: boolean;
+}
+
 export function useLeaderboard(
-  mode: LeaderboardMode,
+  mode: GameMode,
   userId: string | undefined,
   getAccessToken: () => Promise<string | null>,
-) {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+): LeaderboardState {
+  const [state, setState] = useState<LeaderboardState>({
+    leaderboard: null,
+    isLoading: true,
+    hasError: false,
+  });
 
   useEffect(() => {
     if (!userId) return;
-    const controller = new AbortController();
-    setIsLoading(true);
-    setHasError(false);
-    setLeaderboard(null);
-    void (async () => {
-      try {
-        const token = await getAccessToken();
-        if (!token) throw new Error('No session');
-        const result = await leaderboardApi.fetchLeaderboard(mode, token, {
-          signal: controller.signal,
-        });
-        if (!controller.signal.aborted) setLeaderboard(result);
-      } catch {
-        if (!controller.signal.aborted) setHasError(true);
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false);
-      }
-    })();
-    return () => controller.abort();
+    setState({ leaderboard: null, isLoading: true, hasError: false });
+    return loadLeaderboard({
+      client: leaderboardApi,
+      mode,
+      getAccessToken,
+      onLoaded: (leaderboard) => setState({ leaderboard, isLoading: false, hasError: false }),
+      onFailed: () => setState({ leaderboard: null, isLoading: false, hasError: true }),
+    });
   }, [getAccessToken, mode, userId]);
 
-  return { leaderboard, isLoading, hasError };
+  return state;
 }

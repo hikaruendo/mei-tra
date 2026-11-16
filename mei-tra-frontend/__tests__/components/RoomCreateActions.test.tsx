@@ -8,10 +8,6 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-jest.mock('@/i18n/routing', () => ({
-  Link: ({ children, href, ...props }: React.ComponentProps<'a'>) => <a href={href} {...props}>{children}</a>,
-}));
-
 jest.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { email: 'player@example.com', profile: null } }),
 }));

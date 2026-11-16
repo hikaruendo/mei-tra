@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendApiUrl } from '@/lib/backend-api';
-
-async function proxyResponse(response: Response): Promise<NextResponse> {
-  const contentType =
-    response.headers.get('content-type') ?? 'application/json; charset=utf-8';
-  const body = await response.text();
-
-  return new NextResponse(body, {
-    status: response.status,
-    headers: {
-      'content-type': contentType,
-    },
-  });
-}
+import { proxyBackendResponse } from '@/lib/api/proxy-backend-response';
 
 export async function proxyGameHistoryRequest(
   request: NextRequest,
@@ -38,5 +26,5 @@ export async function proxyGameHistoryRequest(
     },
   );
 
-  return proxyResponse(response);
+  return proxyBackendResponse(response);
 }

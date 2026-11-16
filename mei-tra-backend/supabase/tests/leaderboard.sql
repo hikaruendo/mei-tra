@@ -39,7 +39,7 @@ begin
   end loop;
 
   result := public.get_win_rate_leaderboard('normal', players[1]);
-  if (result->>'minimumGames')::integer is distinct from 10 then
+  if (result->>'minimum_games')::integer is distinct from 10 then
     raise exception 'The qualifying match count was not returned: %', result;
   end if;
   if jsonb_array_length(result->'entries') <> 0 then
@@ -67,8 +67,8 @@ begin
      or (result->'entries'->0->>'rank')::integer <> 1
      or (result->'entries'->1->>'rank')::integer <> 1
      or (result->'entries'->2->>'rank')::integer <> 3
-     or (result->'me'->>'gamesPlayed')::integer <> 10
-     or (result->'me'->>'gamesWon')::integer <> 10 then
+     or (result->'me'->>'games_played')::integer <> 10
+     or (result->'me'->>'games_won')::integer <> 10 then
     raise exception 'Incorrect ranks or stats: %', result;
   end if;
 
@@ -89,7 +89,7 @@ begin
   end if;
   result := public.get_win_rate_leaderboard('normal', players[2]);
   if jsonb_array_length(result->'entries') <> 3
-     or (result->'me'->>'gamesPlayed')::integer <> 10 then
+     or (result->'me'->>'games_played')::integer <> 10 then
     raise exception 'A deleted account removed other players results: %', result;
   end if;
 
@@ -109,7 +109,7 @@ begin
   if jsonb_array_length(result->'entries') <> 100
      or (result->'me'->>'rank')::integer <> 1
      or exists (select 1 from jsonb_array_elements(result->'entries') as entry
-                where entry->>'userId' = leaderboard_users[104]::text) then
+                where entry->>'user_id' = leaderboard_users[104]::text) then
     raise exception 'Top 100 or out-of-range self result is incorrect';
   end if;
 end
@@ -134,12 +134,12 @@ begin
                     where user_id = players[1] limit 1);
 
   result := public.get_win_rate_leaderboard('normal', players[1]);
-  if (result->'me'->>'gamesPlayed')::integer <> 10
-     or (result->'me'->>'gamesWon')::integer <> 9 then
+  if (result->'me'->>'games_played')::integer <> 10
+     or (result->'me'->>'games_won')::integer <> 9 then
     raise exception 'A forfeited win was not counted as a loss: %', result;
   end if;
   result := public.get_win_rate_leaderboard('normal', players[3]);
-  if (result->'me'->>'gamesWon')::integer <> 10 then
+  if (result->'me'->>'games_won')::integer <> 10 then
     raise exception 'One player forfeiting changed their partner''s result: %', result;
   end if;
 end

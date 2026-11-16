@@ -11,7 +11,6 @@ describe('LeaderboardController', () => {
   beforeEach(() => {
     repository = {
       getWinRateLeaderboard: jest.fn().mockResolvedValue({
-        mode: 'pro',
         minimumGames: 10,
         entries: [],
         me: null,
@@ -21,7 +20,14 @@ describe('LeaderboardController', () => {
   });
 
   it('reads the requested mode for the signed-in viewer', async () => {
-    await controller.getWinRateLeaderboard('pro', user);
+    await expect(
+      controller.getWinRateLeaderboard('pro', user),
+    ).resolves.toEqual({
+      mode: 'pro',
+      minimumGames: 10,
+      entries: [],
+      me: null,
+    });
 
     expect(repository.getWinRateLeaderboard).toHaveBeenCalledWith(
       'pro',
@@ -31,10 +37,10 @@ describe('LeaderboardController', () => {
 
   it.each([undefined, '', 'expert', ['pro']])(
     'rejects an unknown mode: %j',
-    (mode) => {
-      expect(() => controller.getWinRateLeaderboard(mode, user)).toThrow(
-        BadRequestException,
-      );
+    async (mode) => {
+      await expect(
+        controller.getWinRateLeaderboard(mode, user),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(repository.getWinRateLeaderboard).not.toHaveBeenCalled();
     },
   );

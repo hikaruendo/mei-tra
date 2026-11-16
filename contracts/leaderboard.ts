@@ -1,10 +1,4 @@
-export const LEADERBOARD_MODES = ['normal', 'pro'] as const;
-
-export type LeaderboardMode = (typeof LEADERBOARD_MODES)[number];
-
-export function isLeaderboardMode(value: unknown): value is LeaderboardMode {
-  return LEADERBOARD_MODES.includes(value as LeaderboardMode);
-}
+import type { GameMode } from './room';
 
 export interface LeaderboardEntry {
   userId: string;
@@ -25,7 +19,7 @@ export interface LeaderboardSelf {
 }
 
 export interface LeaderboardResponse {
-  mode: LeaderboardMode;
+  mode: GameMode;
   minimumGames: number;
   entries: LeaderboardEntry[];
   me: LeaderboardSelf | null;

@@ -1,10 +1,11 @@
 import type { LeaderboardResponse } from '@contracts/leaderboard';
-import { isLeaderboardMode } from '@contracts/leaderboard';
+import { isGameMode } from '@contracts/room';
 import {
   createLeaderboardApiClient,
-  describeLeaderboardStanding,
   LeaderboardApiError,
+  loadLeaderboard,
 } from '@meitra/api-client/leaderboard';
+import { describeLeaderboardStanding } from '@meitra/game-client/leaderboard-standing';
 
 const leaderboard = (
   me: LeaderboardResponse['me'],
@@ -22,35 +23,37 @@ const self = (gamesPlayed: number, rank: number | null = null) => ({
 describe('describeLeaderboardStanding', () => {
   it('shows the rank of a ranked player', () => {
     expect(describeLeaderboardStanding(leaderboard(self(12, 4)), false)).toEqual({
-      kind: 'ranked',
-      rank: 4,
-      gamesWon: 3,
-      gamesPlayed: 12,
+      key: 'myRank',
+      values: { rank: 4, wins: 3, games: 12 },
     });
   });
 
   it('counts down to the qualifying match count from the response', () => {
     expect(describeLeaderboardStanding(leaderboard(self(3), 8), false)).toEqual({
-      kind: 'progress',
-      gamesPlayed: 3,
-      remaining: 5,
+      key: 'progress',
+      values: { games: 3, remaining: 5 },
     });
     expect(describeLeaderboardStanding(leaderboard(null), false)).toEqual({
-      kind: 'progress',
-      gamesPlayed: 0,
-      remaining: 10,
+      key: 'progress',
+      values: { games: 0, remaining: 10 },
+    });
+  });
+
+  it('does not count down to zero for a qualified player who is not listed', () => {
+    expect(describeLeaderboardStanding(leaderboard(self(12)), false)).toEqual({
+      key: 'unlisted',
+      values: { games: 12 },
     });
   });
 
   it('tells a guest to register once they have played enough', () => {
     expect(describeLeaderboardStanding(leaderboard(self(9)), true)).toEqual({
-      kind: 'guestProgress',
-      gamesPlayed: 9,
-      remaining: 1,
+      key: 'guestProgress',
+      values: { games: 9, remaining: 1 },
     });
     expect(describeLeaderboardStanding(leaderboard(self(10)), true)).toEqual({
-      kind: 'guestQualified',
-      minimumGames: 10,
+      key: 'guestNote',
+      values: { minimumGames: 10 },
     });
   });
 });
@@ -86,11 +89,63 @@ describe('createLeaderboardApiClient', () => {
   });
 });
 
-describe('isLeaderboardMode', () => {
-  it('accepts only the ranked modes', () => {
-    expect(isLeaderboardMode('normal')).toBe(true);
-    expect(isLeaderboardMode('pro')).toBe(true);
-    expect(isLeaderboardMode('expert')).toBe(false);
-    expect(isLeaderboardMode(null)).toBe(false);
+describe('loadLeaderboard', () => {
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('reports the loaded leaderboard', async () => {
+    const body = leaderboard(null);
+    const onLoaded = jest.fn();
+    const onFailed = jest.fn();
+    loadLeaderboard({
+      client: { fetchLeaderboard: jest.fn().mockResolvedValue(body) },
+      mode: 'normal',
+      getAccessToken: () => Promise.resolve('token-1'),
+      onLoaded,
+      onFailed,
+    });
+    await flush();
+
+    expect(onLoaded).toHaveBeenCalledWith(body);
+    expect(onFailed).not.toHaveBeenCalled();
+  });
+
+  it('fails without a session', async () => {
+    const onFailed = jest.fn();
+    const fetchLeaderboard = jest.fn();
+    loadLeaderboard({
+      client: { fetchLeaderboard },
+      mode: 'normal',
+      getAccessToken: () => Promise.resolve(null),
+      onLoaded: jest.fn(),
+      onFailed,
+    });
+    await flush();
+
+    expect(onFailed).toHaveBeenCalled();
+    expect(fetchLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('reports nothing once cancelled', async () => {
+    const onLoaded = jest.fn();
+    const cancel = loadLeaderboard({
+      client: { fetchLeaderboard: jest.fn().mockResolvedValue(leaderboard(null)) },
+      mode: 'normal',
+      getAccessToken: () => Promise.resolve('token-1'),
+      onLoaded,
+      onFailed: jest.fn(),
+    });
+    cancel();
+    await flush();
+
+    expect(onLoaded).not.toHaveBeenCalled();
+  });
+});
+
+describe('isGameMode', () => {
+  it('accepts only the game modes', () => {
+    expect(isGameMode('normal')).toBe(true);
+    expect(isGameMode('pro')).toBe(true);
+    expect(isGameMode('expert')).toBe(false);
+    expect(isGameMode(null)).toBe(false);
   });
 });
