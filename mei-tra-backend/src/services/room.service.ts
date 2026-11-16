@@ -28,6 +28,7 @@ import {
 import { randomUUID } from 'crypto';
 import { asSeatId } from '../types/identity.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import { electHost, returnHostToHuman } from '../domain/host-election';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -492,9 +493,11 @@ export class RoomService implements IRoomService, OnModuleDestroy {
 
     // If host left, assign new host
     if (room.hostSeatId === seatId) {
-      const newHost = room.players.find((p) => !p.isCOM);
-      if (newHost) {
-        room.hostSeatId = asSeatId(newHost.seatId);
+      const newHostSeatId = electHost(room.players, (candidate) =>
+        Boolean(gameState.getPlayerConnectionState(candidate)?.socketId),
+      );
+      if (newHostSeatId) {
+        room.hostSeatId = newHostSeatId;
       }
     }
 
@@ -731,6 +734,8 @@ export class RoomService implements IRoomService, OnModuleDestroy {
       Object.assign(roomPlayer, updates);
       if (updates.isHost === true) {
         room.hostSeatId = asSeatId(seatId);
+      } else if (updates.isCOM === false) {
+        returnHostToHuman(room, asSeatId(seatId));
       }
 
       const statePlayerIndex = state.players.findIndex(

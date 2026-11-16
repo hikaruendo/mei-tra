@@ -66,7 +66,7 @@ import { ModeratePlayerUseCase } from './use-cases/moderate-player.use-case';
 import { ShuffleTeamsUseCase } from './use-cases/shuffle-teams.use-case';
 import { UpdateTeamNamesUseCase } from './use-cases/update-team-names.use-case';
 import { ConfirmRoundResultsUseCase } from './use-cases/confirm-round-results.use-case';
-import { Room } from './types/room.types';
+import { Room, RoomStatus } from './types/room.types';
 import { toRoomContract, toRoomContracts } from './adapters/room-adapters';
 import {
   ComAutoPlayRecoveryHandlers,
@@ -1014,6 +1014,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.roomId,
         result.data.gameState,
       );
+      // Once every human has left, only COM drives the table, and after a
+      // restart nothing wakes it until someone looks.
+      if (result.data.room.status === RoomStatus.PLAYING) {
+        this.triggerComAutoPlayIfNeeded(data.roomId);
+      }
 
       return {
         success: true,
@@ -1127,6 +1132,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         seatId: leftSeatId,
         roomDeleted,
         roomsList,
+        room: remainingRoom,
+        statePlayers,
         updatedPlayers,
         gamePausedMessage,
         blowState,
@@ -1171,6 +1178,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomId: data.roomId,
           }),
         ]);
+      }
+      // Web reads the host only from room-sync, so a host who leaves mid-game
+      // would otherwise leave the new host without a "next round" button.
+      if (remainingRoom) {
+        this.dispatchEvents(
+          await this.roomUpdateGatewayEffectsService.buildRoomEvents({
+            room: remainingRoom,
+            statePlayers,
+            scope: 'room',
+            roomId: data.roomId,
+          }),
+        );
       }
       if (blowState) {
         this.server.to(data.roomId).emit('blow-updated', {
@@ -1904,8 +1923,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
       await this.processFieldCompletionResult(data.roomId, result);
-      if (result.delayedEvents) {
-        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      // A round this ends waits in round-end, which COM settles for a COM host.
+      if (!result.gameOver) {
+        this.triggerComAutoPlayAfterEvents(
+          data.roomId,
+          result.delayedEvents ?? [],
+        );
       }
     } catch (error) {
       this.logger.error('Error in handleReportChombo:', error);
@@ -1941,8 +1964,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
       await this.processFieldCompletionResult(data.roomId, result);
-      if (result.delayedEvents) {
-        this.triggerComAutoPlayAfterEvents(data.roomId, result.delayedEvents);
+      // A round this ends waits in round-end, which COM settles for a COM host.
+      if (!result.gameOver) {
+        this.triggerComAutoPlayAfterEvents(
+          data.roomId,
+          result.delayedEvents ?? [],
+        );
       }
     } catch (error) {
       this.logger.error('Error in handleDeclareOpen:', error);

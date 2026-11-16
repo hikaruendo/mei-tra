@@ -73,6 +73,8 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
         success: true,
         data: {
           ...baseResponse,
+          room: roomExists,
+          statePlayers: state.players,
           updatedPlayers,
           blowState: state.blowState,
           // COMが空席を引き継ぐためゲームは継続 (gamePausedMessage は送らない)

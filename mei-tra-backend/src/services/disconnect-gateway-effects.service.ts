@@ -9,6 +9,7 @@ import { ActiveRoomMembership } from '../types/room-membership.types';
 import { asSeatId } from '../types/identity.types';
 import type { SeatId } from '../types/identity.types';
 import { toBlowUpdatedPayload } from '../adapters/game-contract-adapters';
+import { electHost } from '../domain/host-election';
 
 export type DisconnectTimeoutMode = 'convert-to-com' | 'remove-player';
 
@@ -306,12 +307,14 @@ export class DisconnectGatewayEffectsService {
     const events: GatewayEvent[] = [];
 
     if (room?.hostSeatId === player.seatId) {
-      const nextHost = room.players.find(
-        (candidate) => candidate.seatId !== player.seatId && !candidate.isCOM,
+      const nextHostSeatId = electHost(
+        room.players.filter((candidate) => candidate.seatId !== player.seatId),
+        (candidate) =>
+          Boolean(roomGameState.getPlayerConnectionState(candidate)?.socketId),
       );
-      if (nextHost) {
+      if (nextHostSeatId) {
         await this.roomService.updateRoom(roomId, {
-          hostSeatId: asSeatId(nextHost.seatId),
+          hostSeatId: nextHostSeatId,
         });
         room = await this.roomService.getRoom(roomId);
         if (room) {

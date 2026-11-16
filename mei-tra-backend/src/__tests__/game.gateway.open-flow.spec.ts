@@ -5,8 +5,10 @@ import { asSeatId } from '../types/identity.types';
 
 type Harness = {
   handleDeclareOpen: GameGateway['handleDeclareOpen'];
+  handleReportChombo: GameGateway['handleReportChombo'];
   handleConfirmRoundResults: GameGateway['handleConfirmRoundResults'];
   declareOpenUseCase: { execute: jest.Mock };
+  reportChomboUseCase: { execute: jest.Mock };
   confirmRoundResultsUseCase: { execute: jest.Mock };
   activityTracker: { recordActivity: jest.Mock };
   resolveClientRoomSeatId: jest.Mock;
@@ -27,6 +29,7 @@ function createGateway(): Harness {
     ...Array.from({ length: 31 }, () => ({})),
   ) as unknown as Harness;
   gateway.declareOpenUseCase = { execute: jest.fn() };
+  gateway.reportChomboUseCase = { execute: jest.fn() };
   gateway.confirmRoundResultsUseCase = { execute: jest.fn() };
   gateway.activityTracker = { recordActivity: jest.fn() };
   gateway.resolveClientRoomSeatId = jest
@@ -98,7 +101,12 @@ describe('GameGateway open behavior', () => {
     await gateway.handleDeclareOpen(client(), { roomId: 'room-1' });
 
     expect(gateway.dispatchEvents).toHaveBeenCalledWith(openEvents);
-    expect(gateway.triggerComAutoPlayAfterEvents).not.toHaveBeenCalled();
+    // Auto-play is woken so a COM host can confirm; for a human host it does
+    // nothing and the round waits for their button.
+    expect(gateway.triggerComAutoPlayAfterEvents).toHaveBeenCalledWith(
+      'room-1',
+      [],
+    );
     expect(gateway.processGameOverUseCase.execute).not.toHaveBeenCalled();
   });
 
@@ -157,5 +165,35 @@ describe('GameGateway open behavior', () => {
     expect(gateway.triggerComAutoPlayAfterEvents).not.toHaveBeenCalled();
     jest.advanceTimersByTime(gameOver.resetDelayMs);
     expect(gateway.closeFinishedRoom).toHaveBeenCalledWith('room-1');
+  });
+
+  it('wakes COM after a chombo report ends the round', async () => {
+    const gateway = createGateway();
+    const chomboEvents = [
+      {
+        scope: 'room' as const,
+        roomId: 'room-1',
+        event: 'chombo-resolved',
+        payload: {},
+      },
+    ];
+    gateway.reportChomboUseCase.execute.mockResolvedValue({
+      success: true,
+      events: chomboEvents,
+      roundStoppedEarly: true,
+    });
+
+    await gateway.handleReportChombo(client(), {
+      roomId: 'room-1',
+      violatorSeatId: asSeatId('seat-2'),
+      violationType: 'wrong-suit',
+    });
+
+    expect(gateway.dispatchEvents).toHaveBeenCalledWith(chomboEvents);
+    // The round now waits in round-end; a COM host only confirms if woken.
+    expect(gateway.triggerComAutoPlayAfterEvents).toHaveBeenCalledWith(
+      'room-1',
+      [],
+    );
   });
 });

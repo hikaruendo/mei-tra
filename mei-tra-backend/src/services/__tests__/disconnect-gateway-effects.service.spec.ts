@@ -208,6 +208,68 @@ describe('DisconnectGatewayEffectsService', () => {
     );
   });
 
+  it('hands the host to a connected player rather than an offline one', async () => {
+    const sockets: Record<string, string> = {
+      'player-1': 'socket-1',
+      'player-2': '',
+      'player-3': 'socket-3',
+    };
+    const roomGameState = {
+      getState: jest.fn(() => ({
+        players: [{ seatId: asSeatId('player-1'), name: 'Host', hand: [] }],
+        gamePhase: 'round-end',
+      })),
+      findSessionUserBySocketId: jest.fn(() => ({
+        socketId: 'socket-1',
+        seatId: asSeatId('player-1'),
+        name: 'Host',
+      })),
+      applyPlayerConnectionState: jest.fn(),
+      getPlayerConnectionState: jest.fn((seatId: string) => ({
+        socketId: sockets[seatId],
+      })),
+      getTransportPlayers: jest.fn(() => []),
+    };
+    const seat = (seatId: string) => ({
+      seatId: asSeatId(seatId),
+      socketId: sockets[seatId],
+      name: seatId,
+      isCOM: false,
+      team: 0,
+      isReady: true,
+      isHost: seatId === 'player-1',
+      joinedAt: new Date(),
+    });
+    const room = {
+      id: 'room-1',
+      status: 'playing',
+      hostSeatId: asSeatId('player-1'),
+      // The offline player sits first, which the old first-human rule picked.
+      players: [seat('player-1'), seat('player-2'), seat('player-3')],
+    };
+    const roomService = {
+      getRoomGameState: jest.fn().mockResolvedValue(roomGameState),
+      getRoom: jest.fn().mockResolvedValue(room),
+      updateRoom: jest.fn().mockResolvedValue(room),
+      listRooms: jest.fn().mockResolvedValue([room]),
+    } as unknown as IRoomService;
+    const service = new DisconnectGatewayEffectsService(
+      roomService,
+      {
+        buildRoomEvents: jest.fn().mockResolvedValue([]),
+        buildRoomsListEvent: jest.fn(() => ({ event: 'rooms-list' })),
+        buildPlayersEvent: jest.fn(() => ({ event: 'update-players' })),
+      } as never,
+      membershipServiceStub(),
+    );
+
+    await service.prepareDisconnect({ roomId: 'room-1', socketId: 'socket-1' });
+
+    expect(roomService.updateRoom).toHaveBeenCalledWith('room-1', {
+      hostSeatId: asSeatId('player-3'),
+    });
+  });
+
   it('keeps a disconnected round-end seat available for host transfer', () => {
     const service = new DisconnectGatewayEffectsService(
       {} as IRoomService,

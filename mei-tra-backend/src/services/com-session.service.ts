@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { asSeatId } from '../types/identity.types';
 import { RosterMembershipMutation } from '../types/room-membership.types';
 import { upsertRuntimeSeat } from './runtime-seat-roster';
+import { electHost } from '../domain/host-election';
 import type { VacantSeats } from '../types/vacant-seat.types';
 import type { SeatId } from '../types/identity.types';
 
@@ -220,6 +221,20 @@ export class ComSessionService {
       replaceSeatId: seatId,
       gameplaySource: gsIndex === -1 ? null : state.players[gsIndex],
     });
+
+    // A COM never presses "next round", so hand the host to a human who can.
+    // With no human left the seat keeps it and COM confirms the round itself.
+    if (room.hostSeatId === resolvedSeatId) {
+      const nextHostSeatId = electHost(room.players, (candidate) =>
+        Boolean(gameState.getPlayerConnectionState(candidate)?.socketId),
+      );
+      if (nextHostSeatId) {
+        room.hostSeatId = nextHostSeatId;
+        room.players.forEach((player) => {
+          player.isHost = player.seatId === nextHostSeatId;
+        });
+      }
+    }
 
     await gameState.persistRoster(
       room.players,
