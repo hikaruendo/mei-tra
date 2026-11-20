@@ -49,6 +49,7 @@ interface Tree {
     findAllByProps: (props: Record<string, unknown>) => TreeNode[];
   };
   update: (element: React.ReactElement) => void;
+  unmount: () => void;
 }
 
 const { act, create } = require('react-test-renderer') as {
@@ -62,11 +63,14 @@ const gate = (
   </LaunchGate>
 );
 
+const mounted: Tree[] = [];
+
 const renderGate = async () => {
   let tree!: Tree;
   await act(async () => {
     tree = create(gate);
   });
+  mounted.push(tree);
   return tree;
 };
 
@@ -100,7 +104,11 @@ beforeEach(() => {
   openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Unmounting clears the gate's launch timers, which would otherwise fire after Jest finishes.
+  await act(async () => {
+    mounted.splice(0).forEach((tree) => tree.unmount());
+  });
   openURL.mockRestore();
   jest.useRealTimers();
 });

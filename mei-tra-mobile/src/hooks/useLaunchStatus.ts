@@ -18,7 +18,7 @@ import {
 export type LaunchStatus =
   | { kind: 'checking' }
   | { kind: 'downloading'; progress: number }
-  | { kind: 'store-update'; storeUrl: string | null }
+  | { kind: 'store-update'; store: StorePlatform; storeUrl: string | null }
   | { kind: 'ready' };
 
 const storePlatform: StorePlatform | null =
@@ -89,7 +89,11 @@ export function useLaunchStatus(): LaunchStatus {
   }, [bundle, bundleSettled]);
 
   if (storeCheck === 'outdated' && storePlatform) {
-    return { kind: 'store-update', storeUrl: getStoreUrl(storePlatform) };
+    return {
+      kind: 'store-update',
+      store: storePlatform,
+      storeUrl: getStoreUrl(storePlatform),
+    };
   }
   if (storeCheck === 'pending') return { kind: 'checking' };
   if (!bundleSettled) {

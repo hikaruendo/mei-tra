@@ -1,15 +1,21 @@
 import type { PropsWithChildren } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader } from '@/components/ui/BrandHeader';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useLaunchStatus } from '@/hooks/useLaunchStatus';
+import type { StorePlatform } from '@/lib/app-version';
 import { t } from '@/i18n';
 import { colors } from '@/theme/colors';
 import { radius } from '@/theme/radius';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
+
+const openStoreLabel: Record<StorePlatform, string> = {
+  ios: 'appUpdate.openAppStore',
+  android: 'appUpdate.openPlayStore',
+};
 
 export function LaunchGate({ children }: PropsWithChildren) {
   const status = useLaunchStatus();
@@ -33,7 +39,7 @@ export function LaunchGate({ children }: PropsWithChildren) {
                 if (status.storeUrl) void Linking.openURL(status.storeUrl);
               }}
             >
-              {t(Platform.OS === 'ios' ? 'appUpdate.openAppStore' : 'appUpdate.openPlayStore')}
+              {t(openStoreLabel[status.store])}
             </Button>
           ) : null}
         </>
