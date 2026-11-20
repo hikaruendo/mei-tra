@@ -191,7 +191,16 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 - OTA更新の前後で、起動、ログイン、Socket.IO handshake、カード表示、1トリック完了を確認する。
 - OTAが起動不能または対局停止を起こした場合は、直ちに前回の正常なupdateへrollbackし、必要ならembedded updateへ戻す。その後、同じruntimeで再配布せず、原因修正とpreview検証を行う。
 
-## 9. ロールバック
+## 9. 強制アップデート
+
+アプリは起動時と前面復帰時に `https://meitra.kando1.com/mobile-version.json`(`mei-tra-frontend/public/mobile-version.json`)を読み、インストール中のバージョンがその platform の `minimumVersion` より古ければ、アップデート案内とストアへのボタンだけを表示する。サインイン・ルーム復帰・Socket接続は始まらない。
+
+- 新しいversionが**そのplatformのストアで公開された後**に、該当platformの値だけを上げてmainへマージする。審査中に上げると、ストアにまだ無いversionを要求して全員が締め出される。
+- iOSとAndroidは公開日がずれるため、それぞれ別々に上げる。
+- ファイルが取得できない、または値が不正な場合はブロックしない。
+- 判定はJavaScriptだけで行うため、OTAでも配信される。ただし0.1.1以前のbinaryにはこのコードが届かない。
+
+## 10. ロールバック
 
 - EAS Build中: EAS dashboardまたは `eas build:cancel` で停止し、署名・設定を修正して再ビルドする。
 - TestFlight / Play内部テスト: 問題のbuildをtester配布から外し、直前の正常buildを再配布する。ストア公開後はストア側の段階的公開・撤回方針に従う。

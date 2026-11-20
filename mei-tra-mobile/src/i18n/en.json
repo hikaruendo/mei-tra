@@ -673,5 +673,11 @@
     "tapToSkip": "Tap to skip",
     "toRooms": "Back to rooms",
     "com": "(COM)"
+  },
+  "appUpdate": {
+    "title": "Update required",
+    "message": "A new version is available. Please update to the latest version.",
+    "openAppStore": "Open the App Store",
+    "openPlayStore": "Open Google Play"
   }
 }

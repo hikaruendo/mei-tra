@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { UpdateRequiredGate } from '@/components/app/UpdateRequiredGate';
 import { AuthProvider } from '@/context/AuthContext';
 import { GameProvider } from '@/context/GameContext';
 import { LocaleProvider } from '@/context/LocaleContext';
@@ -28,26 +29,28 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
         <LocaleProvider>
-          <AuthProvider>
-            <GameProvider>
-              <SocialProvider>
-                <NotificationProvider>
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: colors.background },
-                    }}
-                  >
-                    {/* Keep iOS back swipes from taking over horizontal hand drags. */}
-                    <Stack.Screen
-                      name="room/[roomId]"
-                      options={{ gestureEnabled: false }}
-                    />
-                  </Stack>
-                </NotificationProvider>
-              </SocialProvider>
-            </GameProvider>
-          </AuthProvider>
+          <UpdateRequiredGate>
+            <AuthProvider>
+              <GameProvider>
+                <SocialProvider>
+                  <NotificationProvider>
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        contentStyle: { backgroundColor: colors.background },
+                      }}
+                    >
+                      {/* Keep iOS back swipes from taking over horizontal hand drags. */}
+                      <Stack.Screen
+                        name="room/[roomId]"
+                        options={{ gestureEnabled: false }}
+                      />
+                    </Stack>
+                  </NotificationProvider>
+                </SocialProvider>
+              </GameProvider>
+            </AuthProvider>
+          </UpdateRequiredGate>
         </LocaleProvider>
         <StatusBar style="light" />
       </ThemeProvider>

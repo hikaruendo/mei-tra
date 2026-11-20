@@ -673,5 +673,11 @@
     "tapToSkip": "タップでスキップ",
     "toRooms": "ルーム一覧へ",
     "com": "(COM)"
+  },
+  "appUpdate": {
+    "title": "アップデートが必要です",
+    "message": "新しいバージョンが公開されています。最新版にアップデートしてください。",
+    "openAppStore": "App Storeを開く",
+    "openPlayStore": "Google Playを開く"
   }
 }
