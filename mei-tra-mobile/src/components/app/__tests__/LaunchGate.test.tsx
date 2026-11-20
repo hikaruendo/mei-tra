@@ -2,17 +2,23 @@
 import React from 'react';
 import { Linking, Text } from 'react-native';
 
-import { UpdateRequiredGate } from '../UpdateRequiredGate';
+import { LaunchGate } from '../LaunchGate';
 
 const mockFetchMinimumVersion = jest.fn();
+const mockInstallLatestBundle = jest.fn();
 let mockLifecycleListener:
   | ((snapshot: { appState: string }, previous: { appState: string }) => void)
   | null = null;
 
+jest.mock('expo-updates', () => ({ useUpdates: () => ({ downloadProgress: 0.42 }) }));
 jest.mock('@/lib/app-version', () => ({
   ...jest.requireActual('@/lib/app-version'),
   fetchMinimumVersion: (platform: string) => mockFetchMinimumVersion(platform),
   getInstalledVersion: () => '0.1.2',
+}));
+jest.mock('@/lib/ota-update', () => ({
+  installLatestBundle: (onDownloadStart: () => void) =>
+    mockInstallLatestBundle(onDownloadStart),
 }));
 jest.mock('@/lib/app-lifecycle', () => ({
   subscribeAppLifecycle: (listener: typeof mockLifecycleListener) => {
@@ -25,6 +31,7 @@ jest.mock('@/lib/app-lifecycle', () => ({
 jest.mock('@/lib/config', () => ({
   config: { publicWebBaseUrl: 'https://web.example' },
 }));
+jest.mock('@/components/ui/BrandHeader', () => ({ BrandHeader: () => null }));
 jest.mock('react-native-safe-area-context', () => {
   const { View } = require('react-native');
   return { SafeAreaView: View };
@@ -49,23 +56,22 @@ const renderGate = async () => {
   let tree!: Tree;
   await act(async () => {
     tree = create(
-      <UpdateRequiredGate>
-        <Text>game</Text>
-      </UpdateRequiredGate>,
+      <LaunchGate>
+        <Text>top</Text>
+      </LaunchGate>,
     );
   });
   return tree;
 };
 
 const texts = (tree: Tree) =>
-  tree.root
-    .findAllByType(Text)
-    .map((node) => node.props.children);
+  tree.root.findAllByType(Text).map((node) => node.props.children);
 
 let openURL: jest.SpyInstance;
 
 beforeEach(() => {
-  mockFetchMinimumVersion.mockReset();
+  mockFetchMinimumVersion.mockReset().mockResolvedValue('0.1.2');
+  mockInstallLatestBundle.mockReset().mockResolvedValue('up-to-date');
   openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
@@ -73,27 +79,35 @@ afterEach(() => {
   openURL.mockRestore();
 });
 
-it('lets a current build through', async () => {
-  mockFetchMinimumVersion.mockResolvedValue('0.1.2');
-
-  expect(texts(await renderGate())).toEqual(['game']);
+it('opens the top page once the build and data are current', async () => {
+  expect(texts(await renderGate())).toEqual(['top']);
 });
 
-it('lets the app run when the minimum version cannot be read', async () => {
+it('opens the top page when the minimum version cannot be read', async () => {
   mockFetchMinimumVersion.mockResolvedValue(null);
 
-  expect(texts(await renderGate())).toEqual(['game']);
+  expect(texts(await renderGate())).toEqual(['top']);
 });
 
-it('blocks an outdated build and sends it to the store', async () => {
+it('shows download progress instead of the top page while new data arrives', async () => {
+  mockInstallLatestBundle.mockImplementation((onDownloadStart: () => void) => {
+    onDownloadStart();
+    return new Promise(() => {});
+  });
+
+  const tree = await renderGate();
+
+  expect(texts(tree)).not.toContain('top');
+  expect(texts(tree)).toContain('最新データをダウンロードしています… 42%');
+});
+
+it('sends an outdated build to the store without downloading data', async () => {
   mockFetchMinimumVersion.mockResolvedValue('0.1.3');
 
   const tree = await renderGate();
 
-  expect(texts(tree)).not.toContain('game');
-  expect(texts(tree)).toContain(
-    '新しいバージョンが公開されています。最新版にアップデートしてください。',
-  );
+  expect(texts(tree)).not.toContain('top');
+  expect(mockInstallLatestBundle).not.toHaveBeenCalled();
   const [button] = tree.root.findAllByProps({ accessibilityRole: 'button' });
   void act(() => button.props.onPress());
   expect(openURL).toHaveBeenCalledWith(
@@ -101,15 +115,14 @@ it('blocks an outdated build and sends it to the store', async () => {
   );
 });
 
-it('blocks on return to the foreground once the minimum is raised', async () => {
-  mockFetchMinimumVersion.mockResolvedValue('0.1.2');
+it('checks again on return to the foreground', async () => {
   const tree = await renderGate();
-  expect(texts(tree)).toEqual(['game']);
+  expect(texts(tree)).toEqual(['top']);
 
   mockFetchMinimumVersion.mockResolvedValue('0.1.3');
   await act(async () => {
     mockLifecycleListener?.({ appState: 'active' }, { appState: 'background' });
   });
 
-  expect(texts(tree)).not.toContain('game');
+  expect(texts(tree)).not.toContain('top');
 });

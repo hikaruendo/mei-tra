@@ -191,9 +191,14 @@ account deletionの実装とlocal成功経路は確認済みである。ただ�
 - OTA更新の前後で、起動、ログイン、Socket.IO handshake、カード表示、1トリック完了を確認する。
 - OTAが起動不能または対局停止を起こした場合は、直ちに前回の正常なupdateへrollbackし、必要ならembedded updateへ戻す。その後、同じruntimeで再配布せず、原因修正とpreview検証を行う。
 
-## 9. 強制アップデート
+## 9. 起動時アップデート(LaunchGate)
 
-アプリは起動時と前面復帰時に `https://meitra.kando1.com/mobile-version.json`(`mei-tra-frontend/public/mobile-version.json`)を読み、インストール中のバージョンがその platform の `minimumVersion` より古ければ、アップデート案内とストアへのボタンだけを表示する。サインイン・ルーム復帰・Socket接続は始まらない。
+ゲームのタイトル画面と同じく、トップ画面を開く前に次を順に行う。起動時と前面復帰時の両方で実行し、終わるまでサインイン・ルーム復帰・Socket接続は始まらない。
+
+1. `https://meitra.kando1.com/mobile-version.json`(`mei-tra-frontend/public/mobile-version.json`)を読み、インストール中のバージョンがその platform の `minimumVersion` より古ければ、アップデート案内とストアへのボタンだけを表示する。
+2. EAS Updateに新しいOTAがあれば、進捗バー付きでダウンロードし、再起動して新しいbundleでトップ画面を開く。確認8秒・ダウンロード60秒を超えた場合や失敗した場合は、今のbundleで起動する。同じupdateへの再起動は一度しか試さない。
+
+`minimumVersion` の運用は次のとおり。
 
 - 新しいversionが**そのplatformのストアで公開された後**に、該当platformの値だけを上げてmainへマージする。審査中に上げると、ストアにまだ無いversionを要求して全員が締め出される。
 - iOSとAndroidは公開日がずれるため、それぞれ別々に上げる。

@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { UpdateRequiredGate } from '@/components/app/UpdateRequiredGate';
+import { LaunchGate } from '@/components/app/LaunchGate';
 import { AuthProvider } from '@/context/AuthContext';
 import { GameProvider } from '@/context/GameContext';
 import { LocaleProvider } from '@/context/LocaleContext';
@@ -29,7 +29,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
         <LocaleProvider>
-          <UpdateRequiredGate>
+          <LaunchGate>
             <AuthProvider>
               <GameProvider>
                 <SocialProvider>
@@ -50,7 +50,7 @@ export default function RootLayout() {
                 </SocialProvider>
               </GameProvider>
             </AuthProvider>
-          </UpdateRequiredGate>
+          </LaunchGate>
         </LocaleProvider>
         <StatusBar style="light" />
       </ThemeProvider>

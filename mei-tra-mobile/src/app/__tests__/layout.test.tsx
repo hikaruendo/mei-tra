@@ -21,8 +21,8 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
 }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
-jest.mock('@/components/app/UpdateRequiredGate', () => ({
-  UpdateRequiredGate: (props: { children?: React.ReactNode }) => mockProvider(props),
+jest.mock('@/components/app/LaunchGate', () => ({
+  LaunchGate: (props: { children?: React.ReactNode }) => mockProvider(props),
 }));
 jest.mock('@/context/AuthContext', () => ({
   AuthProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
