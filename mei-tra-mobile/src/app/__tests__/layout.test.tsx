@@ -21,9 +21,18 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
 }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
-jest.mock('@/context/AuthContext', () => ({
-  AuthProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
+let mockGateOpen = true;
+let mockAuthLoaded = false;
+jest.mock('@/components/app/LaunchGate', () => ({
+  LaunchGate: (props: { children?: React.ReactNode }) =>
+    mockGateOpen ? mockProvider(props) : null,
 }));
+jest.mock('@/context/AuthContext', () => {
+  mockAuthLoaded = true;
+  return {
+    AuthProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
+  };
+});
 jest.mock('@/context/GameContext', () => ({
   GameProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
 }));
@@ -36,6 +45,23 @@ jest.mock('@/context/NotificationContext', () => ({
 jest.mock('@/context/SocialContext', () => ({
   SocialProvider: (props: { children?: React.ReactNode }) => mockProvider(props),
 }));
+
+beforeEach(() => {
+  jest.resetModules();
+  mockGateOpen = true;
+  mockAuthLoaded = false;
+});
+
+it('does not load auth while the launch gate holds the app', () => {
+  mockGateOpen = false;
+  const { default: Layout } = jest.requireActual<typeof import('../_layout')>('../_layout');
+
+  act(() => {
+    TestRenderer.create(<Layout />);
+  });
+
+  expect(mockAuthLoaded).toBe(false);
+});
 
 it('disables native back swipes in the room without disabling them across the app', () => {
   act(() => {
