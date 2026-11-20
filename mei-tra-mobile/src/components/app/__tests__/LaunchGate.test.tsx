@@ -4,21 +4,27 @@ import { Linking, Text } from 'react-native';
 
 import { LaunchGate } from '../LaunchGate';
 
-const mockFetchMinimumVersion = jest.fn();
-const mockInstallLatestBundle = jest.fn();
+const mockCheckStoreVersion = jest.fn();
+const mockReloadAsync = jest.fn();
+let mockUpdatesState = {
+  isStartupProcedureRunning: false,
+  isDownloading: false,
+  isUpdatePending: false,
+  restartCount: 0,
+  downloadProgress: undefined as number | undefined,
+};
 let mockLifecycleListener:
   | ((snapshot: { appState: string }, previous: { appState: string }) => void)
   | null = null;
 
-jest.mock('expo-updates', () => ({ useUpdates: () => ({ downloadProgress: 0.42 }) }));
-jest.mock('@/lib/app-version', () => ({
-  ...jest.requireActual('@/lib/app-version'),
-  fetchMinimumVersion: (platform: string) => mockFetchMinimumVersion(platform),
-  getInstalledVersion: () => '0.1.2',
+jest.mock('expo-updates', () => ({
+  isEnabled: true,
+  useUpdates: () => mockUpdatesState,
+  reloadAsync: () => mockReloadAsync(),
 }));
-jest.mock('@/lib/ota-update', () => ({
-  installLatestBundle: (onDownloadStart: () => void) =>
-    mockInstallLatestBundle(onDownloadStart),
+jest.mock('@/lib/app-version', () => ({
+  checkStoreVersion: (platform: string) => mockCheckStoreVersion(platform),
+  getStoreUrl: () => 'https://apps.apple.com/app/id123',
 }));
 jest.mock('@/lib/app-lifecycle', () => ({
   subscribeAppLifecycle: (listener: typeof mockLifecycleListener) => {
@@ -27,9 +33,6 @@ jest.mock('@/lib/app-lifecycle', () => ({
       mockLifecycleListener = null;
     };
   },
-}));
-jest.mock('@/lib/config', () => ({
-  config: { publicWebBaseUrl: 'https://web.example' },
 }));
 jest.mock('@/components/ui/BrandHeader', () => ({ BrandHeader: () => null }));
 jest.mock('react-native-safe-area-context', () => {
@@ -45,6 +48,7 @@ interface Tree {
     findAllByType: (type: unknown) => TreeNode[];
     findAllByProps: (props: Record<string, unknown>) => TreeNode[];
   };
+  update: (element: React.ReactElement) => void;
 }
 
 const { act, create } = require('react-test-renderer') as {
@@ -52,16 +56,30 @@ const { act, create } = require('react-test-renderer') as {
   create: (element: React.ReactElement) => Tree;
 };
 
+const gate = (
+  <LaunchGate>
+    <Text>top</Text>
+  </LaunchGate>
+);
+
 const renderGate = async () => {
   let tree!: Tree;
   await act(async () => {
-    tree = create(
-      <LaunchGate>
-        <Text>top</Text>
-      </LaunchGate>,
-    );
+    tree = create(gate);
   });
   return tree;
+};
+
+const rerender = async (tree: Tree) => {
+  await act(async () => {
+    tree.update(gate);
+  });
+};
+
+const returnToForeground = async () => {
+  await act(async () => {
+    mockLifecycleListener?.({ appState: 'active' }, { appState: 'background' });
+  });
 };
 
 const texts = (tree: Tree) =>
@@ -70,30 +88,40 @@ const texts = (tree: Tree) =>
 let openURL: jest.SpyInstance;
 
 beforeEach(() => {
-  mockFetchMinimumVersion.mockReset().mockResolvedValue('0.1.2');
-  mockInstallLatestBundle.mockReset().mockResolvedValue('up-to-date');
+  mockCheckStoreVersion.mockReset().mockResolvedValue('current');
+  mockReloadAsync.mockReset().mockResolvedValue(undefined);
+  mockUpdatesState = {
+    isStartupProcedureRunning: false,
+    isDownloading: false,
+    isUpdatePending: false,
+    restartCount: 0,
+    downloadProgress: undefined,
+  };
   openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
 afterEach(() => {
   openURL.mockRestore();
+  jest.useRealTimers();
 });
 
 it('opens the top page once the build and data are current', async () => {
   expect(texts(await renderGate())).toEqual(['top']);
 });
 
-it('opens the top page when the minimum version cannot be read', async () => {
-  mockFetchMinimumVersion.mockResolvedValue(null);
+it('opens the top page on a cold start when the minimum cannot be read', async () => {
+  mockCheckStoreVersion.mockResolvedValue('unknown');
 
   expect(texts(await renderGate())).toEqual(['top']);
 });
 
-it('shows download progress instead of the top page while new data arrives', async () => {
-  mockInstallLatestBundle.mockImplementation((onDownloadStart: () => void) => {
-    onDownloadStart();
-    return new Promise(() => {});
-  });
+it('shows download progress instead of the top page', async () => {
+  mockUpdatesState = {
+    ...mockUpdatesState,
+    isStartupProcedureRunning: true,
+    isDownloading: true,
+    downloadProgress: 0.42,
+  };
 
   const tree = await renderGate();
 
@@ -101,28 +129,60 @@ it('shows download progress instead of the top page while new data arrives', asy
   expect(texts(tree)).toContain('最新データをダウンロードしています… 42%');
 });
 
-it('sends an outdated build to the store without downloading data', async () => {
-  mockFetchMinimumVersion.mockResolvedValue('0.1.3');
+it('restarts into the downloaded data before the top page', async () => {
+  mockUpdatesState = { ...mockUpdatesState, isUpdatePending: true };
+
+  const tree = await renderGate();
+
+  expect(mockReloadAsync).toHaveBeenCalledTimes(1);
+  expect(texts(tree)).not.toContain('top');
+});
+
+it('opens the top page when the launch check takes too long', async () => {
+  jest.useFakeTimers();
+  mockUpdatesState = { ...mockUpdatesState, isStartupProcedureRunning: true };
+
+  const tree = await renderGate();
+  expect(texts(tree)).not.toContain('top');
+
+  await act(async () => {
+    jest.advanceTimersByTime(8000);
+  });
+  expect(texts(tree)).toEqual(['top']);
+});
+
+it('sends an outdated build to the store', async () => {
+  mockCheckStoreVersion.mockResolvedValue('outdated');
 
   const tree = await renderGate();
 
   expect(texts(tree)).not.toContain('top');
-  expect(mockInstallLatestBundle).not.toHaveBeenCalled();
   const [button] = tree.root.findAllByProps({ accessibilityRole: 'button' });
   void act(() => button.props.onPress());
-  expect(openURL).toHaveBeenCalledWith(
-    expect.stringMatching(/^https:\/\/(apps\.apple\.com|play\.google\.com)\//),
-  );
+  expect(openURL).toHaveBeenCalledWith('https://apps.apple.com/app/id123');
 });
 
-it('checks again on return to the foreground', async () => {
+it('blocks on return to the foreground and stays blocked while offline', async () => {
   const tree = await renderGate();
   expect(texts(tree)).toEqual(['top']);
 
-  mockFetchMinimumVersion.mockResolvedValue('0.1.3');
-  await act(async () => {
-    mockLifecycleListener?.({ appState: 'active' }, { appState: 'background' });
-  });
-
+  mockCheckStoreVersion.mockResolvedValue('outdated');
+  await returnToForeground();
   expect(texts(tree)).not.toContain('top');
+
+  mockCheckStoreVersion.mockResolvedValue('unknown');
+  await returnToForeground();
+  expect(texts(tree)).not.toContain('top');
+});
+
+it('never restarts a running session for new data', async () => {
+  const tree = await renderGate();
+  expect(texts(tree)).toEqual(['top']);
+
+  mockUpdatesState = { ...mockUpdatesState, isUpdatePending: true };
+  await returnToForeground();
+  await rerender(tree);
+
+  expect(mockReloadAsync).not.toHaveBeenCalled();
+  expect(texts(tree)).toEqual(['top']);
 });

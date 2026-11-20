@@ -12,6 +12,7 @@ export const config = {
     process.env.EXPO_PUBLIC_WEB_BASE_URL || 'https://meitra.kando1.com',
   ),
   supportUrl: 'https://kando1.com',
+  appStoreId: '6806316511',
   supabaseUrl: requirePublicEnv(
     'EXPO_PUBLIC_SUPABASE_URL',
     process.env.EXPO_PUBLIC_SUPABASE_URL,

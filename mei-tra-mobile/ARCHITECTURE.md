@@ -23,15 +23,21 @@ Web 版 (Next.js) はゲーム状態を `useGame` / `useRoom` / `useSocket` の 
 SafeAreaProvider
   ThemeProvider (dark navigation theme)
     LocaleProvider            ← 表示言語の設定 (端末設定 / ja / en)
-      AuthProvider            ← Supabase 認証・セッション管理
-        GameProvider          ← Socket.IO (/) + ゲーム状態 + ルーム管理
-          SocialProvider      ← Socket.IO (/social) + チャット
-            NotificationProvider  ← Push 通知登録 + deep-link ルーティング
-              Stack (expo-router, locale を key にする)
+      LaunchGate              ← 起動時アップデート (ストア版の確認 + OTA 適用)
+        AuthProvider          ← Supabase 認証・セッション管理
+          GameProvider        ← Socket.IO (/) + ゲーム状態 + ルーム管理
+            SocialProvider    ← Socket.IO (/social) + チャット
+              NotificationProvider  ← Push 通知登録 + deep-link ルーティング
+                Stack (expo-router, locale を key にする)
 ```
 
 依存方向は上から下のみ。`NotificationProvider` は `useAuth()` と `useGame()` の両方に依存する
 (Push 通知タップ → `resumeRoom()` でゲームに復帰するため)。
+
+`LaunchGate` は文言のために `LocaleProvider` の内側に置き、通るまで `AuthProvider` 以下を描画しない。
+`AuthProvider` 以下は `components/app/AppProviders.tsx` にまとめ、`_layout.tsx` からゲート通過後に
+`require` する。import した時点で Supabase client がセッションを復元・更新するため、古いビルドで
+認証を始めないようにしている。
 
 `LocaleProvider` は何にも依存しないので最上位に置く。保存済みの選択を読み終えるまで
 `null` を返すため、起動直後に端末の言語が一瞬見えることはない。
@@ -69,6 +75,9 @@ src/
 │   └── NotificationContext.tsx    ← Push 通知・deep-link
 │
 ├── components/
+│   ├── app/                      ← アプリ全体の枠
+│   │   ├── LaunchGate.tsx         ← 起動時アップデート画面 (確認中 / ダウンロード / ストア誘導)
+│   │   └── AppProviders.tsx       ← Auth / Game / Social / Notification provider
 │   ├── game/                     ← ゲーム UI コンポーネント
 │   │   ├── GameBoard.tsx          ← メインゲーム画面
 │   │   ├── WaitingRoom.tsx        ← 待機画面
@@ -87,6 +96,7 @@ src/
 │       └── FeedbackBanner.tsx     ← エラー / 通知バナー
 │
 ├── hooks/
+│   ├── useLaunchStatus.ts         ← 起動時アップデートの進行 (ストア版 + OTA)
 │   ├── useGameHistory.ts          ← 対局ログ取得 (REST API)
 │   └── useLeaderboard.ts          ← ランキング取得 (REST API)
 │
@@ -96,7 +106,9 @@ src/
 │   ├── auth-session.ts           ← トークンリフレッシュ・OAuth 補完
 │   ├── session-cleanup.ts        ← サインアウト / 削除時のクリーンアップ
 │   ├── app-lifecycle.ts          ← AppState + NetInfo リスナー
-│   ├── config.ts                 ← 環境変数 (supabaseUrl, backendUrl)
+│   ├── config.ts                 ← 環境変数 (supabaseUrl, backendUrl) + App Store ID
+│   ├── app-version.ts            ← ストア版の最低バージョン確認 (mobile-version.json)
+│   ├── ota-update.ts             ← 起動時 OTA の進行判定
 │   ├── realtime.ts               ← MobileSocket 型 + emitWithAck ヘルパー
 │   ├── room-storage.ts           ← AsyncStorage ルーム復帰記録 (24h TTL)
 │   ├── game-state.ts             ← スナップショット正規化・プレイヤーマージ
@@ -136,6 +148,7 @@ src/
 │  context/AuthContext.tsx    ← Supabase Auth 状態           │
 │  context/SocialContext.tsx  ← Socket.IO (/social)          │
 │  context/NotificationContext.tsx ← Push 通知               │
+│  hooks/useLaunchStatus.ts   ← 起動時アップデート            │
 │  hooks/useGameHistory.ts                                   │
 └────────────────────────────────────────────────────────────┘
                             ▼
